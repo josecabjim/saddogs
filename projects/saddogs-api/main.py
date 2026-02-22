@@ -20,7 +20,7 @@ def fetch_data():
     resp = (
         supabase.table(TABLE_NAME)
         .select("*")
-        .order("created_at", ascending=True)  # order by date
+        .order("created_at", True)  # True = ascending, False = descending
         .execute()
     )
     return resp.data or []

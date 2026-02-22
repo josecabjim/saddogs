@@ -22,9 +22,13 @@ jobs:
         run: |
           pip install -r packages/saddogs-scrape/requirements.txt
 
-      - name: Run spider
+      - name: Run spiders
         run: |
-          cd packages/saddogs-scrape/saddogs_scrape && scrapy crawl census
+          cd packages/saddogs-scrape/saddogs_scrape
+          # Run the original census spider
+          scrapy crawl census
+          # Run the new Lanzarote Sara spider
+          scrapy crawl lanzarote_sara
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
