@@ -21,6 +21,23 @@ def fetch_data():
     return resp.data
 
 
+def rows_to_chart_data(rows):
+    if not rows:
+        return [], {}
+
+    # x axis = date from year/month/day
+    labels = [f"{r['year']}-{r['month']:02d}-{r['day']:02d}" for r in rows]
+
+    # numeric columns (skip metadata)
+    skip_cols = {"id", "created_at", "year", "month", "day"}
+
+    numeric_cols = [c for c in rows[0].keys() if c not in skip_cols]
+
+    datasets = {col: [r[col] for r in rows] for col in numeric_cols}
+
+    return labels, datasets
+
+
 def make_ascii_table(rows):
     if not rows:
         return "No data"
@@ -56,5 +73,74 @@ def homepage():
             <h2>Database Data</h2>
             <pre>{table}</pre>
         </body>
+    </html>
+    """
+
+
+import json
+
+
+@app.get("/graph", response_class=HTMLResponse)
+def graph_page():
+    rows = fetch_data()
+
+    labels, datasets = rows_to_chart_data(rows)
+
+    return f"""
+    <html>
+    <head>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+
+    <body style="font-family: Arial; margin: 40px;">
+        <h2>Census Graph</h2>
+
+        <canvas id="chart"></canvas>
+
+        <script>
+            const labels = {json.dumps(labels)};
+
+            const datasets = {json.dumps(datasets)};
+
+            const chartDatasets = Object.keys(datasets).map((key, i) => {{
+                return {{
+                    label: key,
+                    data: datasets[key],
+                    fill: false
+                }};
+            }});
+
+            new Chart(
+                document.getElementById("chart"),
+                {{
+                    type: "line",
+                    data: {{
+                        labels: labels,
+                        datasets: chartDatasets
+                    }},
+                    options: {{
+                        responsive: true,
+                        interaction: {{
+                            mode: 'index',
+                            intersect: false
+                        }},
+                        stacked: false,
+                        plugins: {{
+                            legend: {{
+                                position: 'top'
+                            }}
+                        }},
+                        scales: {{
+                            y: {{
+                                beginAtZero: true
+                            }}
+                        }}
+                    }}
+                }}
+            );
+        </script>
+
+    </body>
     </html>
     """
