@@ -1,9 +1,11 @@
+import os
+
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
 from supabase import create_client
 
-SUPABASE_URL = "https://msxqdtjoaicxmzpmhndb.supabase.co"
-SUPABASE_PUBLISHABLE_KEY = "sb_publishable_uDJ7_smtnDquaKX4VMh8EA_O18behoj"
+SUPABASE_URL = os.environ["SUPABASE_URL"]
+SUPABASE_PUBLISHABLE_KEY = os.environ["SUPABASE_PUBLISHABLE_KEY"]
 TABLE_NAME = "census"
 
 supabase = create_client(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY)
