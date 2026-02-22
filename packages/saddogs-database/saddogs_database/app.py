@@ -18,9 +18,6 @@ class CensusItem(BaseModel):
     la_palma: int
     lanzarote: int
     tenerife: int
-    year: int
-    month: int
-    day: int
 
 
 @app.post("/census", status_code=201)

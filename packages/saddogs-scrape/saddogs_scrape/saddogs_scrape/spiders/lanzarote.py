@@ -1,6 +1,7 @@
 import scrapy
 import datetime
 
+
 class SaraSpider(scrapy.Spider):
     name = "lanzarote-sara"
     start_urls = ["https://saraprotectora.org/en/our-animals/find-a-dog/"]
@@ -15,12 +16,15 @@ class SaraSpider(scrapy.Spider):
         header = [header_top] + header_rest
 
         if self.table_key_islands not in header:
-            raise ValueError(f"islands_table_key: {self.table_key_islands} not found in table header")
+            raise ValueError(
+                f"islands_table_key: {self.table_key_islands} not found in table header"
+            )
         if self.table_key_dogs not in header:
-            raise ValueError(f"dog_table_key: {self.table_key_dogs} not found in table header")
-        
-        return header
+            raise ValueError(
+                f"dog_table_key: {self.table_key_dogs} not found in table header"
+            )
 
+        return header
 
     def parse(self, response):
         header = self.parse_header(response)
@@ -36,16 +40,6 @@ class SaraSpider(scrapy.Spider):
         islands = table[self.table_key_islands]
         dogs = table[self.table_key_dogs]
 
-        date = dict(
-            year=datetime.date.today().year,
-            month=datetime.date.today().month,
-            day=datetime.date.today().day
-        )
         census_data = {island: n for island, n in zip(islands, dogs)}
 
-        data = dict(
-            date=date,
-            data=census_data
-        )
-
-        yield data
+        yield census_data

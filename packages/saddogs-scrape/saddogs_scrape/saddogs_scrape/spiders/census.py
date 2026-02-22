@@ -65,27 +65,15 @@ class CensusSpider(scrapy.Spider):
         islands = table[self.table_key_islands]
         dogs = table[self.table_key_dogs]
 
-        date = dict(
-            year=datetime.date.today().year,
-            month=datetime.date.today().month,
-            day=datetime.date.today().day,
-        )
         data_census = {island: n for island, n in zip(islands, dogs)}
         data_db = {
             key_db: str_to_int(data_census[key_census])
             for key_census, key_db in mapping.items()
         }
 
-        # TODO change date format?
-        data = dict(**data_db, **date)
-
         # TODO use separate database module
         try:
-            response = (
-                self.supabase.table("census")
-                .upsert(data, on_conflict="year,month,day")
-                .execute()
-            )
+            response = self.supabase.table("census").upsert(data_db).execute()
 
             self.logger.info(f"Upsert successful: {response.data}")
 
