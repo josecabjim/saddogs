@@ -24,7 +24,7 @@ jobs:
 
       - name: Run spider
         run: |
-          cd packages/saddogs-scrape && scrapy crawl census
+          cd packages/saddogs-scrape/saddogs_scrape && scrapy crawl census
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
