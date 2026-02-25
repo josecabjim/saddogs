@@ -53,20 +53,32 @@ def rows_to_chart_data(rows):
 def rescues_rows_to_chart_data(rows):
     if not rows:
         return [], {}
+
     seen_dates = set()
     filtered_rows = []
+
     for r in rows:
         date_only = r["created_at"][:10]
         if date_only not in seen_dates:
             filtered_rows.append(r)
             seen_dates.add(date_only)
+
     labels = [r["created_at"][:10] for r in filtered_rows]
     islands = list({r["island"] for r in filtered_rows})
+
     datasets = {island: [] for island in islands}
+    totals_per_date = []
+
     for r in filtered_rows:
+        daily_total = 0
         for island in islands:
-            datasets[island].append(r["total_dogs"] if r["island"] == island else 0)
-    datasets["Total"] = [sum(r["total_dogs"] for r in filtered_rows)]
+            value = r["total_dogs"] if r["island"] == island else 0
+            datasets[island].append(value)
+            daily_total += value
+        totals_per_date.append(daily_total)
+
+    datasets["Total"] = totals_per_date
+
     return labels, datasets
 
 
