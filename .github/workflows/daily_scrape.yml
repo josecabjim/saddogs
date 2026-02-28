@@ -22,7 +22,7 @@ jobs:
 
       - run: cd packages/saddogs-scrape && poetry install
 
-      - run: poetry run python -m saddogs_scrape.run_all
+      - run: cd packages/saddogs-scrape/saddogs_scrape && poetry run python -m saddogs_scrape.run_all
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
