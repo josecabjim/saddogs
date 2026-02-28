@@ -6,7 +6,7 @@ on:
   workflow_dispatch:      # Allows manual trigger
 
 jobs:
-  scrape:
+  run:
     runs-on: ubuntu-latest
 
     steps:
@@ -18,18 +18,18 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install Poetry version 2.3.0
+      - name: Install Poetry
         uses: snok/install-poetry@v1
         with:
-            version: 2.3.0
-            virtualenvs-in-project: true
+          version: 2.3.0
+          virtualenvs-in-project: true
 
       - name: Install dependencies
         run: |
           cd packages/saddogs-scrape
           poetry install
-          
-      - name: Run spiders
+
+      - name: Run spider script
         run: |
           cd packages/saddogs-scrape/saddogs_scrape
           poetry run python run_all.py
