@@ -18,17 +18,19 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+
       - name: Install dependencies
         run: |
-          pip install -r packages/saddogs-scrape/requirements.txt
+          cd packages/saddogs-scrape
+          poetry export --without-hashes --output requirements.txt
+          pip install -r requirements.txt
 
       - name: Run spiders
         run: |
           cd packages/saddogs-scrape/saddogs_scrape
-          # Run the original census spider
-          scrapy crawl census
-          # Run the new Lanzarote Sara spider
-          scrapy crawl lanzarote_sara
+          python run_all.py
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}

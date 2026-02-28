@@ -1,4 +1,7 @@
+import json
 import os
+import random
+import re
 import scrapy
 from scrapy import Selector
 
@@ -170,5 +173,68 @@ class LanzaroteTeguise(scrapy.Spider):
             # Also yield the item for Scrapy's internal tracking
             yield data_db
 
+        except Exception as e:
+            self.logger.error(f"Failed to insert data into Supabase: {e}")
+
+
+class LanzaroteCasaEstrellas(scrapy.Spider):
+    name = "lanzarote_casa_estrellas"
+    custom_settings = {
+        "ROBOTSTXT_OBEY": False,
+        "DOWNLOAD_HANDLERS": {
+            "http": "scrapy_playwright.handler.ScrapyPlaywrightDownloadHandler",
+            "https": "scrapy_playwright.handler.ScrapyPlaywrightDownloadHandler",
+        },
+        "TWISTED_REACTOR": "twisted.internet.asyncioreactor.AsyncioSelectorReactor",
+        "PLAYWRIGHT_BROWSER_TYPE": "chromium",
+    }
+
+    def __init__(self, *args, **kwargs):
+        super(LanzaroteCasaEstrellas, self).__init__(*args, **kwargs)
+        # Initialize Supabase client
+        self.supabase = get_supabase_client()
+
+    def start_requests(self):
+        yield scrapy.Request(
+            "https://www.casa-de-las-estrellas.org/es/dogs",
+            meta={
+                "playwright": True,
+                "playwright_include_page": True,
+                "playwright_page_goto_kwargs": {
+                    "wait_until": "networkidle",  # wait until JS done
+                    "timeout": 60000,
+                },
+            },
+            callback=self.parse,
+        )
+
+    async def parse(self, response):
+        page = response.meta["playwright_page"]
+
+        # Extra wait for Wix lazy rendering
+        await page.wait_for_timeout(5000)
+
+        # Scroll once (important for Wix galleries)
+        await page.evaluate("window.scrollBy(0, document.body.scrollHeight)")
+        await page.wait_for_timeout(3000)
+
+        # Now count items
+        items = await page.query_selector_all("div.item-link-wrapper")
+        count = len(items)
+
+        await page.close()
+
+        # Prepare data for Supabase
+        data_db = {
+            "total_dogs": count,
+            "rescue_name": "Casa de las Estrellas",
+            "island": "Lanzarote",
+        }
+
+        # Insert into database
+        try:
+            db_response = self.supabase.table("rescues").insert(data_db).execute()
+            self.logger.info(f"Data successfully saved to Supabase: {db_response.data}")
+            yield data_db
         except Exception as e:
             self.logger.error(f"Failed to insert data into Supabase: {e}")
