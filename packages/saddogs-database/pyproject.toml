@@ -15,7 +15,7 @@ dependencies = [
 ]
 
 [tool.poetry]
-packages = [{include = "saddogs-database"}]
+packages = [{include = "saddogs_database"}]
 
 
 [build-system]

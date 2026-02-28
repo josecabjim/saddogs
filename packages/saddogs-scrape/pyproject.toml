@@ -15,7 +15,7 @@ dependencies = [
 ]
 
 [tool.poetry]
-packages = [{include = "saddogs-scrape"}]
+packages = [{include = "saddogs_scrape"}]
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
