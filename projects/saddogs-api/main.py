@@ -1,8 +1,10 @@
+import json
 import os
+from collections import defaultdict
+
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
 from supabase import create_client
-import json
 
 SUPABASE_URL = os.environ["SUPABASE_URL"]
 SUPABASE_PUBLISHABLE_KEY = os.environ["SUPABASE_PUBLISHABLE_KEY"]
@@ -50,33 +52,39 @@ def rows_to_chart_data(rows):
 # -------------------------
 # Convert rescues table rows to chart data
 # -------------------------
+
+
 def rescues_rows_to_chart_data(rows):
     if not rows:
         return [], {}
 
-    seen_dates = set()
-    filtered_rows = []
+    # Step 1: Aggregate total dogs per date and per island
+    aggregated = defaultdict(lambda: defaultdict(int))  # date -> island -> total_dogs
 
     for r in rows:
         date_only = r["created_at"][:10]
-        if date_only not in seen_dates:
-            filtered_rows.append(r)
-            seen_dates.add(date_only)
+        island = r["island"]
+        aggregated[date_only][island] += r["total_dogs"]
 
-    labels = [r["created_at"][:10] for r in filtered_rows]
-    islands = list({r["island"] for r in filtered_rows})
+    # Step 2: Sort dates
+    labels = sorted(aggregated.keys())
 
+    # Step 3: Find all islands
+    islands = sorted({r["island"] for r in rows})
+
+    # Step 4: Build datasets per island
     datasets = {island: [] for island in islands}
     totals_per_date = []
 
-    for r in filtered_rows:
+    for date in labels:
         daily_total = 0
         for island in islands:
-            value = r["total_dogs"] if r["island"] == island else 0
+            value = aggregated[date].get(island, 0)
             datasets[island].append(value)
             daily_total += value
         totals_per_date.append(daily_total)
 
+    # Step 5: Add total line
     datasets["Total"] = totals_per_date
 
     return labels, datasets
