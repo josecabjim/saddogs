@@ -187,6 +187,10 @@ class LanzaroteCasaEstrellas(scrapy.Spider):
         },
         "TWISTED_REACTOR": "twisted.internet.asyncioreactor.AsyncioSelectorReactor",
         "PLAYWRIGHT_BROWSER_TYPE": "chromium",
+        "PLAYWRIGHT_LAUNCH_OPTIONS": {
+            "headless": True,
+            "args": ["--no-sandbox", "--disable-setuid-sandbox"],
+        },
     }
 
     def __init__(self, *args, **kwargs):
