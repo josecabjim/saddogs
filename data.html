@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Saddogs Data Tables</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+body {
+  font-family: Arial;
+  margin: 40px;
+}
+
+.nav {
+  margin-bottom: 30px;
+  padding: 10px;
+  background: #f0f0f0;
+  border-radius: 5px;
+}
+
+.nav a {
+  margin-right: 20px;
+  text-decoration: none;
+  color: #0066cc;
+  font-weight: bold;
+}
+
+.nav a:hover {
+  text-decoration: underline;
+}
+
+h2 {
+  margin-top: 40px;
+  padding-top: 20px;
+  border-top: 2px solid #ccc;
+}
+
+pre {
+  background: #f6f6f6;
+  padding: 20px;
+  overflow-x: auto;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<h1>Saddogs Data Tables</h1>
+
+<div class="nav">
+  <a href="index.html">Graphs</a>
+  <a href="data.html"><strong>Data Tables</strong></a>
+</div>
+
+<h2>Census Data</h2>
+<pre id="censusTable">Loading...</pre>
+
+<h2>Rescues Data</h2>
+<pre id="rescuesTable">Loading...</pre>
+
+<script>
+
+const SUPABASE_URL="https://msxqdtjoaicxmzpmhndb.supabase.co"
+const SUPABASE_KEY="sb_publishable_uDJ7_smtnDquaKX4VMh8EA_O18behoj"
+
+const { createClient } = supabase;
+
+const client = createClient(
+  SUPABASE_URL,
+  SUPABASE_KEY
+);
+
+function formatTableData(data){
+  if(!data || data.length === 0){
+    return "No data available";
+  }
+
+  const headers = Object.keys(data[0]);
+
+  const widths = {};
+
+  headers.forEach(h=>{
+    widths[h] = Math.max(
+      h.length,
+      ...data.map(r=>String(r[h]).length)
+    );
+  });
+
+  function rowLine(row){
+    return "| " + headers.map(h =>
+      String(row[h]).padEnd(widths[h])
+    ).join(" | ") + " |";
+  }
+
+  const divider =
+    "+-" + headers.map(h => "-".repeat(widths[h])).join("-+-") + "-+";
+
+  const lines = [
+    divider,
+    rowLine(Object.fromEntries(headers.map(h=>[h,h]))),
+    divider
+  ];
+
+  data.forEach(r => lines.push(rowLine(r)));
+
+  lines.push(divider);
+
+  return lines.join("\n");
+}
+
+async function loadData(){
+
+  try{
+    // Load census data
+    const { data: censusData, error: censusError } = await client
+      .from("census")
+      .select("*")
+      .order("created_at",{ascending:false});
+
+    if(censusError){
+      document.getElementById("censusTable").textContent = "Error: " + censusError.message;
+    } else {
+      document.getElementById("censusTable").textContent = formatTableData(censusData);
+    }
+
+    // Load rescues data
+    const { data: rescuesData, error: rescuesError } = await client
+      .from("rescues")
+      .select("*")
+      .order("created_at",{ascending:false});
+
+    if(rescuesError){
+      document.getElementById("rescuesTable").textContent = "Error: " + rescuesError.message;
+    } else {
+      document.getElementById("rescuesTable").textContent = formatTableData(rescuesData);
+    }
+
+  } catch(e){
+    document.getElementById("censusTable").textContent = "Error loading data: " + e.message;
+  }
+}
+
+loadData();
+
+</script>
+
+</body>
+</html>

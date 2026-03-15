@@ -2,7 +2,9 @@
 <html>
 <head>
 <meta charset="utf-8">
-<title>Dog Database</title>
+<title>Saddogs Dashboard</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <style>
@@ -10,25 +12,75 @@ body {
   font-family: Arial;
   margin: 40px;
 }
-pre {
-  background: #f6f6f6;
-  padding: 20px;
-  overflow-x: auto;
+
+.nav {
+  margin-bottom: 30px;
+  padding: 10px;
+  background: #f0f0f0;
+  border-radius: 5px;
 }
+
+.nav a {
+  margin-right: 20px;
+  text-decoration: none;
+  color: #0066cc;
+  font-weight: bold;
+}
+
+.nav a:hover {
+  text-decoration: underline;
+}
+
+.container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px;
+  margin-top: 30px;
+}
+
+@media (max-width: 1200px) {
+  .container {
+    grid-template-columns: 1fr;
+  }
+}
+
+.chart-section {
+  min-width: 0;
+}
+
+.chart-section h2 {
+  margin-top: 0;
+}
+
+canvas {
+  max-width: 100%;
+  height: 400px;
+}
+
 </style>
 
 </head>
 
 <body>
 
-<h2>Database Data</h2>
+<h1>Saddogs Dashboard</h1>
 
-<pre id="table">Loading...</pre>
+<div class="nav">
+  <a href="index.html"><strong>Graphs</strong></a>
+  <a href="data.html">Data Tables</a>
+</div>
 
-<p>
-<a href="graph.html">Census Graph</a> |
-<a href="graph-rescues.html">Rescues Graph</a>
-</p>
+<div class="container">
+  <div class="chart-section">
+    <h2>Dogs Registered in Canary Islands (Census)</h2>
+    <canvas id="censusChart"></canvas>
+  </div>
+  
+  <div class="chart-section">
+    <h2>Rescued Dogs by Island</h2>
+    <canvas id="rescuesChart"></canvas>
+  </div>
+</div>
 
 <script>
 
@@ -42,53 +94,130 @@ const client = createClient(
   SUPABASE_KEY
 );
 
-async function loadData(){
+const pastel = [
+  "#FFB6B9","#FAD0C4","#A8E6CF",
+  "#DCEDC2","#FFD3B6","#FFAAA5",
+  "#84FAB0","#8FD3F4","#C6FFDD"
+];
 
-  const { data, error } = await client
+function processCensusData(rows){
+  const seen = new Set();
+  const filtered = [];
+
+  rows.forEach(r=>{
+    const date = r.created_at.slice(0,10);
+    if(!seen.has(date)){
+      seen.add(date);
+      filtered.push(r);
+    }
+  });
+
+  const labels = filtered.map(r => r.created_at.slice(0,10));
+
+  const skip = ["id","created_at"];
+
+  const numeric = Object.keys(filtered[0])
+    .filter(c => !skip.includes(c));
+
+  const datasets = {};
+
+  numeric.forEach(col=>{
+    datasets[col] = filtered.map(r=>r[col]);
+  });
+
+  datasets["Total"] = filtered.map(r =>
+    numeric.reduce((s,c)=>s+r[c],0)
+  );
+
+  return {labels,datasets};
+}
+
+function processRescuesData(rows){
+  const aggregated = {};
+
+  rows.forEach(r=>{
+    const date = r.created_at.slice(0,10);
+    const island = r.island;
+
+    if(!aggregated[date]) aggregated[date] = {};
+    if(!aggregated[date][island]) aggregated[date][island] = 0;
+
+    aggregated[date][island] += r.total_dogs;
+  });
+
+  const labels = Object.keys(aggregated).sort();
+
+  const islands =
+    [...new Set(rows.map(r=>r.island))].sort();
+
+  const datasets = {};
+
+  islands.forEach(i=>datasets[i]=[]);
+
+  const totals = [];
+
+  labels.forEach(date=>{
+    let daily = 0;
+
+    islands.forEach(island=>{
+      const v = aggregated[date][island] || 0;
+      datasets[island].push(v);
+      daily += v;
+    });
+
+    totals.push(daily);
+  });
+
+  datasets["Total"] = totals;
+
+  return {labels,datasets};
+}
+
+function createChart(canvasId, labels, datasets){
+  const chartDatasets =
+    Object.entries(datasets).map(([k,v],i)=>({
+      label:k,
+      data:v,
+      fill:false,
+      borderColor:pastel[i%pastel.length],
+      tension:0.3,
+      borderWidth: k==="Total" ? 3 : 2
+    }));
+
+  new Chart(
+    document.getElementById(canvasId),
+    {
+      type:"line",
+      data:{labels,datasets:chartDatasets},
+      options:{
+        responsive:true,
+        interaction:{mode:'nearest',intersect:false}
+      }
+    }
+  );
+}
+
+async function load(){
+  // Load census data
+  const {data: censusData} = await client
     .from("census")
     .select("*")
     .order("created_at",{ascending:true});
 
-  if(error){
-    document.getElementById("table").textContent = error.message;
-    return;
-  }
+  const {labels: censusLabels, datasets: censusDatasets} = processCensusData(censusData);
+  createChart("censusChart", censusLabels, censusDatasets);
 
-  const headers = Object.keys(data[0]);
+  // Load rescues data
+  const {data: rescuesData} = await client
+    .from("rescues")
+    .select("*")
+    .order("created_at",{ascending:true});
 
-  const widths = {};
-
-  headers.forEach(h=>{
-    widths[h] = Math.max(
-      h.length,
-      ...data.map(r=>String(r[h]).length)
-    );
-  });
-
-  function rowLine(row){
-    return "| " + headers.map(h =>
-      String(row[h]).padEnd(widths[h])
-    ).join(" | ") + " |";
-  }
-
-  const divider =
-    "+-" + headers.map(h => "-".repeat(widths[h])).join("-+-") + "-+";
-
-  const lines = [
-    divider,
-    rowLine(Object.fromEntries(headers.map(h=>[h,h]))),
-    divider
-  ];
-
-  data.forEach(r => lines.push(rowLine(r)));
-
-  lines.push(divider);
-
-  document.getElementById("table").textContent =
-    lines.join("\n");
+  const {labels: rescuesLabels, datasets: rescuesDatasets} = processRescuesData(rescuesData);
+  createChart("rescuesChart", rescuesLabels, rescuesDatasets);
 }
 
-loadData();
+load();
 
 </script>
 
