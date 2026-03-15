@@ -14,7 +14,7 @@ jobs:
   health_check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions/setup-python@v4
         with:
           python-version: ${{ env.PYTHON_VERSION }}
@@ -32,7 +32,8 @@ jobs:
           mkdir -p reports
           poetry run python run_all.py --dry-run
       - name: Upload health check report
-        uses: actions/upload-artifact@v3
+        if: always()
+        uses: actions/upload-artifact@v4
         with:
           name: spider-health-report
-          path: packages/saddogs-scrape/saddogs_scrape/reports/report.json
+          path: packages/saddogs-scrape/saddogs_scrape/reports/report_*.json
