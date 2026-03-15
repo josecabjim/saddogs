@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+<meta charset="utf-8">
+
+<title>Rescues Graph</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+body{
+  font-family: Arial;
+  margin:40px;
+}
+
+canvas{
+  max-width:100%;
+  height:400px;
+}
+</style>
+
+</head>
+
+<body>
+
+<h2>Rescued Dogs by Island</h2>
+
+<canvas id="chart"></canvas>
+
+<script>
+
+const SUPABASE_URL = "YOUR_SUPABASE_URL";
+const SUPABASE_KEY = "YOUR_PUBLISHABLE_KEY";
+
+const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+function process(rows){
+
+  const aggregated = {};
+
+  rows.forEach(r=>{
+    const date = r.created_at.slice(0,10);
+    const island = r.island;
+
+    if(!aggregated[date]) aggregated[date] = {};
+    if(!aggregated[date][island]) aggregated[date][island] = 0;
+
+    aggregated[date][island] += r.total_dogs;
+  });
+
+  const labels = Object.keys(aggregated).sort();
+
+  const islands =
+    [...new Set(rows.map(r=>r.island))].sort();
+
+  const datasets = {};
+
+  islands.forEach(i=>datasets[i]=[]);
+
+  const totals = [];
+
+  labels.forEach(date=>{
+    let daily = 0;
+
+    islands.forEach(island=>{
+      const v = aggregated[date][island] || 0;
+      datasets[island].push(v);
+      daily += v;
+    });
+
+    totals.push(daily);
+  });
+
+  datasets["Total"] = totals;
+
+  return {labels,datasets};
+}
+
+async function load(){
+
+  const {data} = await supabase
+    .from("rescues")
+    .select("*")
+    .order("created_at",{ascending:true});
+
+  const {labels,datasets} = process(data);
+
+  const pastel = [
+    "#FFB6B9","#FAD0C4","#A8E6CF",
+    "#DCEDC2","#FFD3B6","#FFAAA5",
+    "#84FAB0","#8FD3F4","#C6FFDD"
+  ];
+
+  const chartDatasets =
+    Object.entries(datasets).map(([k,v],i)=>({
+      label:k,
+      data:v,
+      fill:false,
+      borderColor:pastel[i%pastel.length],
+      tension:0.3,
+      borderWidth: k==="Total" ? 3 : 2
+    }));
+
+  new Chart(
+    document.getElementById("chart"),
+    {
+      type:"line",
+      data:{labels,datasets:chartDatasets}
+    }
+  );
+}
+
+load();
+
+</script>
+
+</body>
+</html>
