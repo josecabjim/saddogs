@@ -35,11 +35,16 @@ pre {
 const SUPABASE_URL="https://msxqdtjoaicxmzpmhndb.supabase.co"
 const SUPABASE_KEY="sb_publishable_uDJ7_smtnDquaKX4VMh8EA_O18behoj"
 
-const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const { createClient } = supabase;
+
+const client = createClient(
+  SUPABASE_URL,
+  SUPABASE_KEY
+);
 
 async function loadData(){
 
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from("census")
     .select("*")
     .order("created_at",{ascending:true});
