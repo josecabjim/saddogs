@@ -1,16 +1,17 @@
-name: Daily Scrape
+name: Spider Health Check
 
 on:
   schedule:
-    - cron: "0 6 * * *"  # daily at 06:00 UTC
-  workflow_dispatch:     # allows manual runs
+    # every 4 hours
+    - cron: "0 */4 * * *"
+  workflow_dispatch:   # allow manual runs
 
 env:
   PYTHON_VERSION: "3.12"
   POETRY_VERSION: "2.3.0"
 
 jobs:
-  scrape_daily:
+  health_check:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -27,7 +28,4 @@ jobs:
           poetry run playwright install chromium
       - run: |
           cd packages/saddogs-scrape/saddogs_scrape
-          poetry run python run_all.py
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          poetry run python run_all.py --dry-run
