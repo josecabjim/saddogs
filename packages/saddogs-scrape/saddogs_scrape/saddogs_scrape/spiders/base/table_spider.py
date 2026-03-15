@@ -1,8 +1,7 @@
-import scrapy
-from saddogs_scrape.spiders.base.base_spider import get_supabase_client
+from saddogs_scrape.spiders.base.base_spider import BaseRescueSpider
 
 
-class BaseTableSpider(scrapy.Spider):
+class BaseTableSpider(BaseRescueSpider):
     table_selector = "table"
     header_selector = "thead th::text"
     cell_selector = "tbody td::text"
@@ -11,8 +10,6 @@ class BaseTableSpider(scrapy.Spider):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-        self.supabase = get_supabase_client()
 
         if not self.db_table:
             raise ValueError(f"{self.name}: db_table must be defined")

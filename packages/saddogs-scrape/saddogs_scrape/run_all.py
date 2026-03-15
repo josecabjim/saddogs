@@ -107,15 +107,15 @@ def run_all_spiders(spider_filter=None, verbose=False, dry_run=False):
     logger.info(f"Found {len(spiders_list)} spider(s) to run.")
 
     for spider_class in spiders_list:
-        spider_name = getattr(spider_class, "name", spider_class.__name__)
-        logger.info(f"Scheduling spider: {spider_name}")
-
-        crawler = process.create_crawler(spider_class)
-
-        # Attach monitor signal handlers
-        crawler.signals.connect(monitor.spider_closed, signal=signals.spider_closed)
-
-        process.crawl(crawler, dry_run=dry_run)
+        try:
+            spider_name = getattr(spider_class, "name", spider_class.__name__)
+            logger.info(f"Scheduling spider: {spider_name}")
+            crawler = process.create_crawler(spider_class)
+            crawler.signals.connect(monitor.spider_closed, signal=signals.spider_closed)
+            process.crawl(crawler, dry_run=dry_run)
+        except Exception as e:
+            logger.error(f"Failed to schedule spider {spider_class.name}: {e}")
+            monitor.failed_spiders[spider_class.name] = str(e)
 
     logger.info("Starting crawler process...")
 
