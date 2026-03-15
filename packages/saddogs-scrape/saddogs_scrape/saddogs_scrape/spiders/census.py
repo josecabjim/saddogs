@@ -2,13 +2,18 @@ from __future__ import annotations
 
 from typing import Dict
 
-from saddogs_scrape.spiders.base.table_spider import BaseTableSpider
+from saddogs_scrape.spiders.base.base_spider import BaseSpider
+from saddogs_scrape.spiders.services.validation import validate_count
 
 
-class CensusSpider(BaseTableSpider):
+class CensusSpider(BaseSpider):
     name = "census"
     start_urls = ["https://www.zoocan.net/Paginas/Censos.aspx"]
     db_table = "census"
+
+    table_selector = "table"
+    header_selector = "thead th::text"
+    cell_selector = "tbody td::text"
 
     islands_key = "Islas"
     dogs_key = "Perros"
@@ -23,6 +28,63 @@ class CensusSpider(BaseTableSpider):
         "Lanzarote": "lanzarote",
         "Tenerife": "tenerife",
     }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        if not self.db_table:
+            raise ValueError(f"{self.name}: db_table must be defined")
+
+    def get_previous_census(self):
+        """Fetch the previous census record from the database."""
+        try:
+            response = (
+                self.supabase.table(self.db_table)
+                .select("*")
+                .order("created_at", desc=True)
+                .limit(1)
+                .execute()
+            )
+
+            data = response.data
+            if not data:
+                return None
+
+            return data[0]
+
+        except Exception as e:
+            self.logger.warning(f"Could not fetch previous census: {e}")
+            return None
+
+    def validate_census_data(self, data: Dict[str, int]):
+        """Validate that each island count is a positive integer."""
+        for island, count in data.items():
+            if not isinstance(count, int) or count < 0:
+                raise ValueError(
+                    f"{self.name}: Invalid count for {island}: {count} (expected positive int)"
+                )
+
+    def validate_against_previous_census(self, previous: Dict, current: Dict[str, int]):
+        """Validate current census against previous to detect anomalies."""
+        if not previous:
+            return  # No previous data to validate against
+
+        for island, current_count in current.items():
+            previous_count = previous.get(island)
+            if previous_count is None:
+                continue
+
+            # Check for drastic drops (more than 50% decrease)
+            if current_count < previous_count * 0.5:
+                raise ValueError(
+                    f"{self.name}: Anomaly detected in {island}: count dropped from {previous_count} to {current_count}"
+                )
+
+            # Check for extreme increases (more than 200% increase)
+            if current_count > previous_count * 3:
+                raise ValueError(
+                    f"{self.name}: Anomaly detected in {island}: count jumped from {previous_count} to {current_count}"
+                )
 
     def parse_table(self, response) -> Dict[str, list[str]]:
         # Handle special case: first header cell is wrapped in <span>
@@ -42,6 +104,21 @@ class CensusSpider(BaseTableSpider):
             table[header[i % len(header)]].append(cell)
 
         return table
+
+    def save_result(self, data):
+
+        if self.dry_run:
+            self.logger.info(f"[DRY RUN] Would upsert data: {data}")
+        else:
+            try:
+                response = self.supabase.table(self.db_table).upsert(data).execute()
+                self.logger.info(f"Upsert successful: {response.data}")
+
+            except Exception as e:
+                self.logger.error(f"Upsert failed: {e}")
+                raise
+
+        return data
 
     def parse(self, response):
         table = self.parse_table(response)
@@ -67,4 +144,11 @@ class CensusSpider(BaseTableSpider):
                         f"{self.name}: could not parse '{label}': {census[label]!r}"
                     ) from e
 
-        self.save(data_db)
+        # Validate the census data
+        self.validate_census_data(data_db)
+
+        # Validate against previous census
+        previous = self.get_previous_census()
+        self.validate_against_previous_census(previous, data_db)
+
+        self.save_result(data_db)

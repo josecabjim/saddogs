@@ -26,9 +26,8 @@ def save_rescue_result(client, data):
     return client.table("rescues").insert(data).execute()
 
 
-class BaseRescueSpider(scrapy.Spider):
-    rescue_name = None
-    island = None
+class BaseSpider(scrapy.Spider):
+    """Base spider with common dry_run and Supabase initialization."""
 
     def __init__(self, *args, dry_run=False, **kwargs):
         super().__init__(*args, **kwargs)
@@ -39,6 +38,11 @@ class BaseRescueSpider(scrapy.Spider):
             self.supabase = get_supabase_client()
 
         self.total_count = 0
+
+
+class BaseRescueSpider(BaseSpider):
+    rescue_name = None
+    island = None
 
     def get_previous_count(self):
 
