@@ -10,6 +10,7 @@ import time
 from pathlib import Path
 
 import saddogs_scrape.spiders as spiders_pkg
+from saddogs_scrape.spiders.services.send_failure_email import send_failure_email
 from scrapy import Spider, signals
 from scrapy.crawler import CrawlerProcess
 from scrapy.utils.log import configure_logging
@@ -167,7 +168,10 @@ if __name__ == "__main__":
         if monitor.failed_spiders:
             logger.error(f"Failed spiders: {len(monitor.failed_spiders)}")
             logger.error(monitor.failed_spiders)
-
+            send_failure_email(
+                failed_spiders=monitor.failed_spiders,
+                subject="Spider Health Alert",
+            )
         else:
             logger.info("All spiders completed successfully.")
 
@@ -182,5 +186,4 @@ if __name__ == "__main__":
         with open(REPORT_FILE, "w") as f:
             json.dump(report, f)
 
-        sys.exit(1)
         sys.exit(1)
