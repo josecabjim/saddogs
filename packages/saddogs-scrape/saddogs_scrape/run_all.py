@@ -98,6 +98,7 @@ def run_all_spiders(spider_filter=None, verbose=False, dry_run=False):
 
     monitor = SpiderMonitor()
     spiders_list = load_spiders(spider_filter)
+    logger.info(f"Spiders loaded: {[spider.__name__ for spider in spiders_list]}")
 
     if not spiders_list:
         logger.warning("No spiders found to run.")

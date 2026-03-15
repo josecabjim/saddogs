@@ -3,4 +3,4 @@ __pycache__
 .env
 
 .vscode/
-**/*/scrape_report.json
+**/*/reports
