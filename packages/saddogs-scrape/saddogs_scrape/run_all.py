@@ -1,5 +1,13 @@
 """Run all available spiders in the Saddogs project."""
 
+import os
+
+# Needed for Github Actions to avoid twisted reactor errors when running multiple spiders sequentially
+if os.environ.get("CI", "false").lower() == "true":
+    from twisted.internet import asyncioreactor
+
+    asyncioreactor.install()
+
 import argparse
 import importlib
 import json
@@ -189,4 +197,5 @@ if __name__ == "__main__":
         with open(REPORT_FILE, "w") as f:
             json.dump(report, f)
 
+        sys.exit(1)
         sys.exit(1)
