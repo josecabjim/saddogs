@@ -7,6 +7,7 @@ import logging
 import pkgutil
 import sys
 import time
+from datetime import datetime
 from pathlib import Path
 
 import saddogs_scrape.spiders as spiders_pkg
@@ -16,7 +17,8 @@ from scrapy.crawler import CrawlerProcess
 from scrapy.utils.log import configure_logging
 from scrapy.utils.project import get_project_settings
 
-REPORT_FILE = Path("scrape_report.json")
+_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+REPORT_FILE = Path(__file__).parent / "reports" / f"report_{_timestamp}.json"
 
 
 class SpiderMonitor:
@@ -123,6 +125,7 @@ def write_report(monitor):
         "success": monitor.successful_spiders,
         "failed": monitor.failed_spiders,
     }
+    REPORT_FILE.parent.mkdir(exist_ok=True)
 
     with open(REPORT_FILE, "w") as f:
         json.dump(report, f, indent=2)

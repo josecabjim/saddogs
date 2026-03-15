@@ -26,6 +26,13 @@ jobs:
           cd packages/saddogs-scrape
           poetry install
           poetry run playwright install chromium
-      - run: |
+      - name: Run health check
+        run: |
           cd packages/saddogs-scrape/saddogs_scrape
+          mkdir -p reports
           poetry run python run_all.py --dry-run
+      - name: Upload health check report
+        uses: actions/upload-artifact@v3
+        with:
+          name: spider-health-report
+          path: packages/saddogs-scrape/saddogs_scrape/reports/report.json
