@@ -2,7 +2,7 @@ name: Daily Scrape
 
 on:
   schedule:
-    - cron: "0 6 * * *"  # daily at 06:00 UTC
+    - cron: "30 6 * * *"  # daily at 06:30 UTC
   workflow_dispatch:     # allows manual runs
 
 env:
