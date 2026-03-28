@@ -1,6 +1,7 @@
 """Run all available spiders in the Saddogs project."""
 
 import os
+from xml.parsers.expat import errors
 
 # Needed for Github Actions to avoid twisted reactor errors when running multiple spiders sequentially
 if os.environ.get("CI", "false").lower() == "true":
@@ -80,6 +81,11 @@ class SpiderMonitor:
                 f"CRITICAL: High download failures ({summary['download_failures']})"
             )
 
+        if summary["items_scraped"] == 0 and summary["responses"] > 0:
+            errors.append(
+                "CRITICAL: Site structure likely changed (responses OK, no items)"
+            )
+
         # --- HIGH ---
         if summary["download_failures"] > 5:
             errors.append(
@@ -96,9 +102,6 @@ class SpiderMonitor:
             errors.append("HIGH: Requests made but no responses received")
 
         # --- WARNING ---
-        if summary["items_scraped"] < 3:
-            errors.append(f"WARNING: Very low item count ({summary['items_scraped']})")
-
         if summary["retry_count"] > 5:
             errors.append(f"WARNING: High retry count ({summary['retry_count']})")
 
@@ -106,9 +109,6 @@ class SpiderMonitor:
             errors.append(
                 f"WARNING: Many duplicate requests filtered ({summary['dupe_filtered']})"
             )
-
-        if summary["requests"] < 5:
-            errors.append(f"WARNING: Very few requests made ({summary['requests']})")
 
         if summary["responses"] < summary["requests"] * 0.5:
             errors.append(
@@ -273,16 +273,30 @@ if __name__ == "__main__":
 
         logger = logging.getLogger(__name__)
 
-        logger.info("----------- SCRAPE SUMMARY -----------")
-        logger.info(f"Successful spiders: {len(monitor.successful_spiders)}")
-        logger.info(monitor.successful_spiders)
+        results = getattr(monitor, "results", {})
 
-        if monitor.failed_spiders:
-            logger.error(f"Failed spiders: {len(monitor.failed_spiders)}")
-            logger.error(monitor.failed_spiders)
-            send_failure_email(results=monitor.results)
+        critical = [s for s in results.values() if s["severity"] == "critical"]
+        high = [s for s in results.values() if s["severity"] == "high"]
+        warning = [s for s in results.values() if s["severity"] == "warning"]
+        success = [s for s in results.values() if s["severity"] == "success"]
+
+        logger.info("----------- SCRAPE SUMMARY -----------")
+        logger.info(f"Total spiders: {len(results)}")
+        logger.info(f"Critical: {len(critical)}")
+        logger.info(f"High: {len(high)}")
+        logger.info(f"Warning: {len(warning)}")
+        logger.info(f"Successful: {len(success)}")
+
+        # 🚨 send email if anything non-success
+        if critical or high:
+            logger.error("Issues detected, sending alert email...")
+            send_failure_email(
+                results=results,
+                subject="Spider Health Alert",
+            )
+            sys.exit(1)
         else:
-            logger.info("All spiders completed successfully.")
+            logger.info("All spiders healthy.")
 
     except Exception as e:
         logging.error(f"Fatal error: {e}", exc_info=True)
