@@ -68,22 +68,15 @@ class SpiderMonitor:
 
         # --- CRITICAL ---
         if reason != "finished":
-            print("******** 1")
             errors.append(f"CRITICAL: Spider closed with reason '{reason}'")
 
         if summary["items_scraped"] == 0:
-            print("******** 2")
-
             errors.append("CRITICAL: No items scraped")
 
         if summary["spider_exceptions"] > 0:
-            print("******** 3")
-
             errors.append(f"CRITICAL: {summary['spider_exceptions']} spider exceptions")
 
         if summary["download_failures"] > 10:
-            print("******** 4")
-
             errors.append(
                 f"CRITICAL: High download failures ({summary['download_failures']})"
             )

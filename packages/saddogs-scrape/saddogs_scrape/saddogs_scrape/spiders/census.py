@@ -36,22 +36,8 @@ class CensusSpider(BaseSpider):
             raise ValueError(f"{self.name}: db_table must be defined")
 
     def get_previous_census(self):
-        """Fetch the previous census record from the database."""
         try:
-            response = (
-                self.supabase.table(self.db_table)
-                .select("*")
-                .order("created_at", desc=True)
-                .limit(1)
-                .execute()
-            )
-
-            data = response.data
-            if not data:
-                return None
-
-            return data[0]
-
+            return self.db.census.get_latest()
         except Exception as e:
             self.logger.warning(f"Could not fetch previous census: {e}")
             return None
@@ -64,6 +50,7 @@ class CensusSpider(BaseSpider):
                     f"{self.name}: Invalid count for {island}: {count} (expected positive int)"
                 )
 
+    # TODO should move to database
     def validate_against_previous_census(self, previous: Dict, current: Dict[str, int]):
         """Validate current census against previous to detect anomalies."""
         if not previous:
@@ -106,17 +93,11 @@ class CensusSpider(BaseSpider):
         return table
 
     def save_result(self, data):
-
         if self.dry_run:
             self.logger.info(f"[DRY RUN] Would upsert data: {data}")
         else:
-            try:
-                response = self.supabase.table(self.db_table).upsert(data).execute()
-                self.logger.info(f"Upsert successful: {response.data}")
-
-            except Exception as e:
-                self.logger.error(f"Upsert failed: {e}")
-                raise
+            self.db.census.save(data)
+            self.logger.info("Upsert successful")
 
         return data
 
