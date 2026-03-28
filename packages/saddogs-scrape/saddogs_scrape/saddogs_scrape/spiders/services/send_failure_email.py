@@ -38,9 +38,24 @@ def send_failure_email(failed_spiders: Dict[str, str], subject: str = None) -> b
             )
             return False
 
-        body = "Saddogs scraping completed with failures.\n\n"
-        for spider, reason in failed_spiders.items():
-            body += f"{spider} -> {reason}\n"
+        body = "🚨 Saddogs Spider Health Report\n\n"
+        for spider, data in failed_spiders.items():
+            body += f"--- {spider} ---\n"
+            body += f"Reason: {data.get('reason')}\n"
+            body += f"Items scraped: {data.get('items_scraped')}\n"
+            body += f"Requests: {data.get('requests')}\n"
+            body += f"Download failures: {data.get('download_failures')}\n"
+            body += f"Spider exceptions: {data.get('spider_exceptions')}\n"
+
+            if data.get("exception_types"):
+                body += f"Exception types: {data['exception_types']}\n"
+
+            if data.get("errors"):
+                body += "Errors:\n"
+                for err in data["errors"]:
+                    body += f"  - {err}\n"
+
+            body += "\n"
 
         msg = MIMEText(body)
         msg["Subject"] = subject or f"Saddogs Scraper Failure ({date.today()})"

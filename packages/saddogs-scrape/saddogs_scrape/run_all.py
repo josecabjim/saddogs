@@ -37,31 +37,106 @@ class SpiderMonitor:
         self.failed_spiders = {}  # spider_name -> list of errors
 
     def spider_closed(self, spider, reason):
-        stats = (
-            getattr(spider, "crawler", None).stats.get_stats()
-            if getattr(spider, "crawler", None)
-            else {}
-        )
+        crawler = getattr(spider, "crawler", None)
+        stats = crawler.stats.get_stats() if crawler else {}
 
-        # count download failures
-        download_failures = stats.get("downloader/exception_count", 0)
-        # count spider exceptions (parse errors, etc.)
-        spider_exceptions = stats.get("spider_exceptions/count", 0)
+        spider_name = spider.name
 
-        # collect exception messages if any
-        exception_types = stats.get("spider_exceptions", {})
+        summary = {
+            "reason": reason,
+            "items_scraped": stats.get("item_scraped_count", 0),
+            "requests": stats.get("downloader/request_count", 0),
+            "responses": stats.get("downloader/response_count", 0),
+            "http_errors": stats.get("downloader/response_status_count/500", 0)
+            + stats.get("downloader/response_status_count/404", 0),
+            "download_failures": stats.get("downloader/exception_count", 0),
+            "spider_exceptions": stats.get("spider_exceptions/count", 0),
+            "retry_count": stats.get("retry/count", 0),
+            "dupe_filtered": stats.get("dupefilter/filtered", 0),
+        }
 
+        # include detailed exception types if present
+        if stats.get("spider_exceptions"):
+            summary["exception_types"] = stats["spider_exceptions"]
+
+        # optional: capture a few log lines if you want later
+
+        # define health rules
         errors = []
-        if download_failures > 0:
-            errors.append(f"Download failures: {download_failures}")
-        if spider_exceptions > 0:
-            errors.append(f"Spider exceptions: {exception_types}")
 
-        # if anything went wrong or reason not 'finished', mark as failed
-        if errors or reason != "finished":
-            self.failed_spiders[spider.name] = errors or reason
+        # --- CRITICAL ISSUES (almost always broken spiders) ---
+
+        if reason != "finished":
+            errors.append(f"CRITICAL: Spider closed with reason '{reason}'")
+
+        if summary["items_scraped"] == 0:
+            errors.append("CRITICAL: No items scraped")
+
+        if summary["spider_exceptions"] > 0:
+            errors.append(f"CRITICAL: {summary['spider_exceptions']} spider exceptions")
+
+        if summary["download_failures"] > 10:
+            errors.append(
+                f"CRITICAL: High download failures ({summary['download_failures']})"
+            )
+
+        # --- HIGH SEVERITY (likely broken or degraded) ---
+
+        if summary["download_failures"] > 0:
+            errors.append(
+                f"HIGH: Excessive download failures ({summary['download_failures']})"
+            )
+
+        if summary["http_errors"] > 10:
+            errors.append(f"HIGH: Many HTTP errors ({summary['http_errors']})")
+
+        if summary["responses"] == 0:
+            errors.append("HIGH: No HTTP responses received")
+
+        if summary["requests"] > 0 and summary["responses"] == 0:
+            errors.append("HIGH: Requests made but no responses received")
+
+        # --- WARNING (suspicious / degraded behavior) ---
+
+        if summary["items_scraped"] < 3:
+            errors.append(f"WARNING: Very low item count ({summary['items_scraped']})")
+
+        if summary["retry_count"] > 5:
+            errors.append(f"WARNING: High retry count ({summary['retry_count']})")
+
+        if summary["dupe_filtered"] > 50:
+            errors.append(
+                f"WARNING: Many duplicate requests filtered ({summary['dupe_filtered']})"
+            )
+
+        if summary["requests"] < 5:
+            errors.append(f"WARNING: Very few requests made ({summary['requests']})")
+
+        if summary["responses"] < summary["requests"] * 0.5:
+            errors.append(
+                f"WARNING: Low response rate ({summary['responses']}/{summary['requests']})"
+            )
+
+        # --- INFO / DEBUG SIGNALS (useful context, not failures) ---
+
+        if summary["items_scraped"] > 0 and summary["requests"] > 0:
+            efficiency = summary["items_scraped"] / summary["requests"]
+            if efficiency < 0.05:
+                errors.append(
+                    f"INFO: Low scrape efficiency ({summary['items_scraped']} items / {summary['requests']} requests)"
+                )
+
+        if summary.get("duration_seconds"):
+            if summary["duration_seconds"] > 300:
+                errors.append(
+                    f"INFO: Slow spider runtime ({summary['duration_seconds']:.2f}s)"
+                )
+
+        if errors:
+            summary["errors"] = errors
+            self.failed_spiders[spider_name] = summary
         else:
-            self.successful_spiders.append(spider.name)
+            self.successful_spiders.append(summary)
 
 
 def load_spiders(spider_filter=None):
@@ -129,11 +204,30 @@ def run_all_spiders(spider_filter=None, verbose=False, dry_run=False):
 
 
 def write_report(monitor):
+    all_spiders = {}
+
+    for s in monitor.successful_spiders:
+        all_spiders[s["name"] if "name" in s else "unknown"] = {
+            "status": "success",
+            **s,
+        }
+
+    for name, data in monitor.failed_spiders.items():
+        all_spiders[name] = {
+            "status": "failed",
+            **data,
+        }
 
     report = {
-        "success": monitor.successful_spiders,
-        "failed": monitor.failed_spiders,
+        "timestamp": datetime.now().isoformat(),
+        "summary": {
+            "total": len(all_spiders),
+            "success": len(monitor.successful_spiders),
+            "failed": len(monitor.failed_spiders),
+        },
+        "spiders": all_spiders,
     }
+
     REPORT_FILE.parent.mkdir(exist_ok=True)
 
     with open(REPORT_FILE, "w") as f:
@@ -198,5 +292,4 @@ if __name__ == "__main__":
         with open(REPORT_FILE, "w") as f:
             json.dump(report, f)
 
-        sys.exit(1)
         sys.exit(1)
