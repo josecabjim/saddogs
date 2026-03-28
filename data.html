@@ -1,150 +1,410 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<meta charset="utf-8">
-<title>Saddogs Data Tables</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sad Dogs Data Tables</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-<style>
-body {
-  font-family: Arial;
-  margin: 40px;
-}
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
 
-.nav {
-  margin-bottom: 30px;
-  padding: 10px;
-  background: #f0f0f0;
-  border-radius: 5px;
-}
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+      color: #333;
+    }
 
-.nav a {
-  margin-right: 20px;
-  text-decoration: none;
-  color: #0066cc;
-  font-weight: bold;
-}
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
 
-.nav a:hover {
-  text-decoration: underline;
-}
+    header {
+      background: white;
+      border-radius: 12px;
+      padding: 28px;
+      margin-bottom: 28px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+    }
 
-h2 {
-  margin-top: 40px;
-  padding-top: 20px;
-  border-top: 2px solid #ccc;
-}
+    header h1 {
+      font-size: 32px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 12px;
+    }
 
-pre {
-  background: #f6f6f6;
-  padding: 20px;
-  overflow-x: auto;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-}
+    .header-info {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-top: 12px;
+    }
 
-</style>
+    .last-updated {
+      font-size: 13px;
+      color: #666;
+      background: #f5f5f5;
+      padding: 8px 12px;
+      border-radius: 6px;
+    }
+
+    .loader {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      background: #667eea;
+      border-radius: 50%;
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    nav {
+      display: flex;
+      gap: 12px;
+      margin-top: 14px;
+      flex-wrap: wrap;
+    }
+
+    nav a {
+      padding: 10px 18px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      text-decoration: none;
+      border-radius: 6px;
+      transition: all 0.3s ease;
+      font-weight: 500;
+      font-size: 14px;
+      border: 2px solid transparent;
+    }
+
+    nav a:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+
+    nav a.active {
+      background: white;
+      color: #667eea;
+      border-color: #667eea;
+    }
+
+    .content {
+      display: flex;
+      flex-direction: column;
+      gap: 28px;
+      margin-bottom: 28px;
+    }
+
+    .table-card {
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .table-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+    }
+
+    .table-card h2 {
+      font-size: 20px;
+      color: #667eea;
+      margin-bottom: 8px;
+      margin-top: 0;
+    }
+
+    .table-card p {
+      font-size: 13px;
+      color: #999;
+      margin-bottom: 16px;
+    }
+
+    .table-container {
+      overflow-x: auto;
+      background: #f9f9f9;
+      border-radius: 8px;
+      padding: 16px;
+      border: 1px solid #e5e5e5;
+    }
+
+    pre {
+      font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Courier New', monospace;
+      font-size: 12px;
+      line-height: 1.6;
+      color: #333;
+      overflow-x: auto;
+    }
+
+    footer {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+      color: white;
+      font-size: 12px;
+    }
+
+    .error {
+      background: #fee;
+      border: 1px solid #fcc;
+      color: #c33;
+      padding: 16px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: white;
+    }
+
+    .loading-spinner {
+      display: inline-block;
+      width: 40px;
+      height: 40px;
+      border: 4px solid rgba(255, 255, 255, 0.3);
+      border-top: 4px solid white;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 16px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .row-count {
+      font-size: 12px;
+      color: #999;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid #e5e5e5;
+    }
+
+    @media (max-width: 1024px) {
+      header h1 {
+        font-size: 28px;
+      }
+
+      .header-info {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      nav {
+        width: 100%;
+      }
+
+      nav a {
+        flex: 1;
+        text-align: center;
+      }
+    }
+
+    @media (max-width: 640px) {
+      body {
+        padding: 12px;
+      }
+
+      header {
+        padding: 20px;
+        margin-bottom: 20px;
+      }
+
+      header h1 {
+        font-size: 24px;
+      }
+
+      .content {
+        gap: 20px;
+        margin-bottom: 20px;
+      }
+
+      .table-card {
+        padding: 16px;
+      }
+
+      .table-container {
+        padding: 12px;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      pre {
+        font-size: 11px;
+        line-height: 1.4;
+      }
+
+      nav a {
+        padding: 8px 12px;
+        font-size: 13px;
+      }
+    }
+
+  </style>
 
 </head>
 
 <body>
 
-<h1>Saddogs Data Tables</h1>
+<div class="container">
+  <header>
+    <h1>🐕 Sad Dogs Dashboard</h1>
+    <div class="header-info">
+      <div class="last-updated">
+        <span class="loader"></span> Loading data...
+      </div>
+    </div>
+    <nav>
+      <a href="index2.html">Graphs</a>
+      <a href="data2.html" class="active"><strong>Data Tables</strong></a>
+    </nav>
+  </header>
 
-<div class="nav">
-  <a href="index.html">Graphs</a>
-  <a href="data.html"><strong>Data Tables</strong></a>
+  <div id="error" style="display: none;" class="error"></div>
+
+  <div class="content" id="tables">
+    <div class="loading">
+      <div class="loading-spinner"></div>
+      <p>Loading your data...</p>
+    </div>
+  </div>
+
+  <footer>
+    <p>🔄 Data updates daily at 8:00 AM • Powered by Sad Dogs Analytics</p>
+  </footer>
 </div>
-
-<h2>Census Data</h2>
-<pre id="censusTable">Loading...</pre>
-
-<h2>Rescues Data</h2>
-<pre id="rescuesTable">Loading...</pre>
 
 <script>
 
-const SUPABASE_URL="https://msxqdtjoaicxmzpmhndb.supabase.co"
-const SUPABASE_KEY="sb_publishable_uDJ7_smtnDquaKX4VMh8EA_O18behoj"
+  const SUPABASE_URL = "https://msxqdtjoaicxmzpmhndb.supabase.co";
+  const SUPABASE_KEY = "sb_publishable_uDJ7_smtnDquaKX4VMh8EA_O18behoj";
 
-const { createClient } = supabase;
+  const { createClient } = supabase;
 
-const client = createClient(
-  SUPABASE_URL,
-  SUPABASE_KEY
-);
+  const client = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-function formatTableData(data){
-  if(!data || data.length === 0){
-    return "No data available";
-  }
-
-  const headers = Object.keys(data[0]);
-
-  const widths = {};
-
-  headers.forEach(h=>{
-    widths[h] = Math.max(
-      h.length,
-      ...data.map(r=>String(r[h]).length)
-    );
-  });
-
-  function rowLine(row){
-    return "| " + headers.map(h =>
-      String(row[h]).padEnd(widths[h])
-    ).join(" | ") + " |";
-  }
-
-  const divider =
-    "+-" + headers.map(h => "-".repeat(widths[h])).join("-+-") + "-+";
-
-  const lines = [
-    divider,
-    rowLine(Object.fromEntries(headers.map(h=>[h,h]))),
-    divider
-  ];
-
-  data.forEach(r => lines.push(rowLine(r)));
-
-  lines.push(divider);
-
-  return lines.join("\n");
-}
-
-async function loadData(){
-
-  try{
-    // Load census data
-    const { data: censusData, error: censusError } = await client
-      .from("census")
-      .select("*")
-      .order("created_at",{ascending:false});
-
-    if(censusError){
-      document.getElementById("censusTable").textContent = "Error: " + censusError.message;
-    } else {
-      document.getElementById("censusTable").textContent = formatTableData(censusData);
+  function formatTableData(data) {
+    if (!data || data.length === 0) {
+      return "No data available";
     }
 
-    // Load rescues data
-    const { data: rescuesData, error: rescuesError } = await client
-      .from("rescues")
-      .select("*")
-      .order("created_at",{ascending:false});
+    const headers = Object.keys(data[0]);
 
-    if(rescuesError){
-      document.getElementById("rescuesTable").textContent = "Error: " + rescuesError.message;
-    } else {
-      document.getElementById("rescuesTable").textContent = formatTableData(rescuesData);
+    const widths = {};
+
+    headers.forEach(h => {
+      widths[h] = Math.max(
+        h.length,
+        ...data.map(r => String(r[h]).length)
+      );
+    });
+
+    function rowLine(row) {
+      return "| " + headers.map(h =>
+        String(row[h]).padEnd(widths[h])
+      ).join(" | ") + " |";
     }
 
-  } catch(e){
-    document.getElementById("censusTable").textContent = "Error loading data: " + e.message;
-  }
-}
+    const divider =
+      "+-" + headers.map(h => "-".repeat(widths[h])).join("-+-") + "-+";
 
-loadData();
+    const lines = [
+      divider,
+      rowLine(Object.fromEntries(headers.map(h => [h, h]))),
+      divider
+    ];
+
+    data.forEach(r => lines.push(rowLine(r)));
+
+    lines.push(divider);
+
+    return lines.join("\n");
+  }
+
+  async function loadData() {
+
+    try {
+      // Load census data
+      const { data: censusData, error: censusError } = await client
+        .from("census")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (censusError) throw censusError;
+
+      // Load rescues data
+      const { data: rescuesData, error: rescuesError } = await client
+        .from("rescues")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (rescuesError) throw rescuesError;
+
+      // Update header
+      const lastDate = new Date().toISOString().split('T')[0];
+      document.querySelector('.last-updated').innerHTML = `📊 Records as of ${lastDate}`;
+
+      // Replace loading content with tables
+      const tablesContainer = document.getElementById('tables');
+      
+      const censusFmt = formatTableData(censusData);
+      const rescuesFmt = formatTableData(rescuesData);
+
+      tablesContainer.innerHTML = `
+        <div class="table-card">
+          <h2>Census Data</h2>
+          <p>Dog registration records from the Canary Islands</p>
+          <div class="table-container">
+            <pre>${censusFmt}</pre>
+          </div>
+          <div class="row-count">📌 Total records: ${censusData.length}</div>
+        </div>
+        
+        <div class="table-card">
+          <h2>Rescues Data</h2>
+          <p>Rescued dogs by island and date</p>
+          <div class="table-container">
+            <pre>${rescuesFmt}</pre>
+          </div>
+          <div class="row-count">📌 Total records: ${rescuesData.length}</div>
+        </div>
+      `;
+
+    } catch (error) {
+      console.error('Error loading data:', error);
+      const errorDiv = document.getElementById('error');
+      errorDiv.style.display = 'block';
+      errorDiv.textContent = `Error loading data: ${error.message}`;
+      
+      const tablesContainer = document.getElementById('tables');
+      tablesContainer.innerHTML = '<p style="color: white; text-align: center;">Unable to load tables. Please try refreshing the page.</p>';
+    }
+  }
+
+  loadData();
 
 </script>
 

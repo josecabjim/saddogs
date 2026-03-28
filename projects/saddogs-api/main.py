@@ -32,8 +32,11 @@ class DataCache:
             return True
 
         now = datetime.now()
+        # If we're before 8 AM, cache is valid since yesterday 8 AM
+        # If we're after 8 AM, cache is valid until tomorrow 8 AM
         cache_time = datetime.combine(now.date(), time(8, 0, 0))
         if now.time() < time(8, 0, 0):
+            # Before 8 AM today - cache valid if it was set after 8 AM yesterday
             cache_time = cache_time.replace(day=cache_time.day - 1)
 
         return timestamp < cache_time
@@ -94,20 +97,27 @@ def rows_to_chart_data(rows):
 # -------------------------
 # Convert rescues table rows to chart data
 # -------------------------
+
+
 def rescues_rows_to_chart_data(rows):
     if not rows:
         return [], {}
 
-    aggregated = defaultdict(lambda: defaultdict(int))
+    # Step 1: Aggregate total dogs per date and per island
+    aggregated = defaultdict(lambda: defaultdict(int))  # date -> island -> total_dogs
 
     for r in rows:
         date_only = r["created_at"][:10]
         island = r["island"]
         aggregated[date_only][island] += r["total_dogs"]
 
+    # Step 2: Sort dates
     labels = sorted(aggregated.keys())
+
+    # Step 3: Find all islands
     islands = sorted({r["island"] for r in rows})
 
+    # Step 4: Build datasets per island
     datasets = {island: [] for island in islands}
     totals_per_date = []
 
@@ -119,6 +129,7 @@ def rescues_rows_to_chart_data(rows):
             daily_total += value
         totals_per_date.append(daily_total)
 
+    # Step 5: Add total line
     datasets["Total"] = totals_per_date
 
     return labels, datasets
@@ -145,231 +156,22 @@ def make_ascii_table(rows):
 
 
 # -------------------------
-# Base HTML Template
-# -------------------------
-def get_base_styles():
-    return """
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-            color: #333;
-        }
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-        header {
-            background: white;
-            border-radius: 12px;
-            padding: 24px;
-            margin-bottom: 24px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-        header h1 {
-            font-size: 28px;
-            color: #667eea;
-            margin-bottom: 8px;
-        }
-        .header-info {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 16px;
-        }
-        .last-updated {
-            font-size: 14px;
-            color: #666;
-            background: #f5f5f5;
-            padding: 8px 12px;
-            border-radius: 6px;
-        }
-        nav {
-            display: flex;
-            gap: 12px;
-            margin-top: 16px;
-            flex-wrap: wrap;
-        }
-        nav a {
-            display: inline-block;
-            padding: 10px 16px;
-            background: #667eea;
-            color: white;
-            text-decoration: none;
-            border-radius: 6px;
-            transition: all 0.3s ease;
-            font-weight: 500;
-        }
-        nav a:hover {
-            background: #764ba2;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-        }
-        nav a.active {
-            background: #764ba2;
-        }
-        main {
-            background: white;
-            border-radius: 12px;
-            padding: 24px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-        h2 {
-            color: #667eea;
-            margin-bottom: 20px;
-            font-size: 24px;
-        }
-        .chart-container {
-            position: relative;
-            height: 450px;
-            margin-bottom: 20px;
-        }
-        canvas {
-            width: 100% !important;
-            height: 100% !important;
-        }
-        .data-table {
-            overflow-x: auto;
-            background: #f9f9f9;
-            border-radius: 8px;
-            padding: 16px;
-            margin-top: 16px;
-        }
-        pre {
-            font-family: 'Monaco', 'Courier New', monospace;
-            font-size: 12px;
-            line-height: 1.5;
-            overflow-x: auto;
-        }
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 16px;
-            margin-bottom: 24px;
-        }
-        .stat-card {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-        .stat-card h3 {
-            font-size: 14px;
-            font-weight: 600;
-            opacity: 0.9;
-            margin-bottom: 8px;
-        }
-        .stat-card .value {
-            font-size: 28px;
-            font-weight: bold;
-        }
-        footer {
-            text-align: center;
-            margin-top: 24px;
-            color: white;
-            font-size: 12px;
-        }
-        @media (max-width: 768px) {
-            header h1 {
-                font-size: 22px;
-            }
-            .header-info {
-                flex-direction: column;
-                align-items: flex-start;
-            }
-            nav {
-                width: 100%;
-            }
-            nav a {
-                flex: 1;
-                text-align: center;
-            }
-            .chart-container {
-                height: 300px;
-            }
-        }
-    """
-
-
-def get_navigation(current_page=None):
-    pages = [
-        ("Home", "/", "home"),
-        ("Census Graph", "/graph", "census"),
-        ("Rescues Graph", "/graph-rescues", "rescues"),
-    ]
-    nav_html = "<nav>"
-    for label, url, page_id in pages:
-        active = ' style="background: #764ba2;"' if current_page == page_id else ""
-        nav_html += f'<a href="{url}"{active}>{label}</a>'
-    nav_html += "</nav>"
-    return nav_html
-
-
-def get_last_updated_time(timestamp):
-    if timestamp is None:
-        return "Never"
-    diff = datetime.now() - timestamp
-    if diff.total_seconds() < 60:
-        return "Just now"
-    elif diff.total_seconds() < 3600:
-        return f"{int(diff.total_seconds() / 60)} minutes ago"
-    elif diff.total_seconds() < 86400:
-        return f"{int(diff.total_seconds() / 3600)} hours ago"
-    else:
-        return timestamp.strftime("%Y-%m-%d %H:%M")
-
-
-# -------------------------
 # Homepage
 # -------------------------
 @app.get("/", response_class=HTMLResponse)
 def homepage():
     data = fetch_census()
     table = make_ascii_table(data)
-    last_update = get_last_updated_time(cache.census_timestamp)
-
     return f"""
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Sad Dogs - Analytics Dashboard</title>
-        <style>
-            {get_base_styles()}
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <header>
-                <h1>🐕 Sad Dogs Analytics</h1>
-                <div class="header-info">
-                    <div class="last-updated">Updated: {last_update}</div>
-                </div>
-                {get_navigation("home")}
-            </header>
-            
-            <main>
-                <h2>Database Overview</h2>
-                <p style="color: #666; margin-bottom: 16px;">Latest census data from the Canary Islands dog registry.</p>
-                <div class="data-table">
-                    <pre>{table}</pre>
-                </div>
-            </main>
-            
-            <footer>
-                <p>Data refreshes daily at 8:00 AM</p>
-            </footer>
-        </div>
-    </body>
+    <html>
+        <body style="font-family: Arial; margin: 40px;">
+            <h2>Database Data</h2>
+            <pre>{table}</pre>
+            <p>
+                <a href="/graph">Census Graph</a> | 
+                <a href="/graph-rescues">Rescues Graph</a>
+            </p>
+        </body>
     </html>
     """
 
@@ -381,18 +183,16 @@ def homepage():
 def graph_page():
     rows = fetch_census()
     labels, datasets = rows_to_chart_data(rows)
-    last_update = get_last_updated_time(cache.census_timestamp)
-
-    colors = [
-        "#667eea",
-        "#764ba2",
-        "#f093fb",
-        "#4facfe",
-        "#00f2fe",
-        "#43e97b",
-        "#fa709a",
-        "#fee140",
-        "#30cfd0",
+    pastel_colors = [
+        "#FFB6B9",
+        "#FAD0C4",
+        "#A8E6CF",
+        "#DCEDC2",
+        "#FFD3B6",
+        "#FFAAA5",
+        "#84FAB0",
+        "#8FD3F4",
+        "#C6FFDD",
     ]
     chart_datasets = []
     for i, (key, values) in enumerate(datasets.items()):
@@ -401,111 +201,38 @@ def graph_page():
                 "label": key,
                 "data": values,
                 "fill": False,
-                "borderColor": colors[i % len(colors)],
-                "backgroundColor": colors[i % len(colors)],
-                "tension": 0.4,
-                "borderWidth": 3 if key == "Total" else 2,
-                "pointRadius": 4 if key == "Total" else 3,
-                "pointBackgroundColor": colors[i % len(colors)],
-                "pointBorderColor": "#fff",
-                "pointBorderWidth": 2,
-                "pointHoverRadius": 6,
+                "borderColor": pastel_colors[i % len(pastel_colors)],
+                "tension": 0.3,
+                "borderWidth": 2 if key != "Total" else 3,
             }
         )
-
-    date_range = f"{labels[0]} to {labels[-1]}" if labels else "No data"
-
     return f"""
-    <!DOCTYPE html>
-    <html lang="en">
+    <html>
     <head>
-        <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Census Graph - Sad Dogs Analytics</title>
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
         <style>
-            {get_base_styles()}
+            body {{ font-family: Arial; margin: 40px; background: #fefefe; color: #333; }}
+            h2 {{ text-align: center; margin-bottom: 30px; }}
+            canvas {{ max-width: 100%; height: 400px; }}
         </style>
     </head>
     <body>
-        <div class="container">
-            <header>
-                <h1>🐕 Sad Dogs Analytics</h1>
-                <div class="header-info">
-                    <div class="last-updated">Updated: {last_update}</div>
-                </div>
-                {get_navigation("census")}
-            </header>
-            
-            <main>
-                <h2>Dogs Registered in Canary Islands</h2>
-                <p style="color: #666; margin-bottom: 16px;">Cumulative dog registrations over time ({date_range})</p>
-                <div class="chart-container">
-                    <canvas id="chart"></canvas>
-                </div>
-            </main>
-            
-            <footer>
-                <p>Data refreshes daily at 8:00 AM • Last update: {last_update}</p>
-            </footer>
-        </div>
-        
+        <h2>Dogs Registered in Canary Islands</h2>
+        <canvas id="chart"></canvas>
         <script>
             const labels = {json.dumps(labels)};
             const datasets = {json.dumps(chart_datasets)};
-            const ctx = document.getElementById("chart").getContext("2d");
-            new Chart(ctx, {{
+            new Chart(document.getElementById("chart"), {{
                 type: "line",
                 data: {{ labels: labels, datasets: datasets }},
                 options: {{
                     responsive: true,
-                    maintainAspectRatio: false,
-                    interaction: {{ mode: 'index', intersect: false }},
-                    plugins: {{
-                        legend: {{
-                            position: 'top',
-                            labels: {{
-                                font: {{ size: 12, weight: 600 }},
-                                padding: 16,
-                                usePointStyle: true,
-                                pointStyle: 'circle'
-                            }}
-                        }},
-                        tooltip: {{
-                            mode: 'index',
-                            intersect: false,
-                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                            titleFont: {{ size: 14, weight: 'bold' }},
-                            bodyFont: {{ size: 12 }},
-                            padding: 12,
-                            cornerRadius: 8,
-                            displayColors: true
-                        }}
-                    }},
+                    interaction: {{ mode: 'nearest', intersect: false }},
+                    plugins: {{ legend: {{ position: 'top' }}, tooltip: {{ mode: 'index', intersect: false }} }},
                     scales: {{
-                        y: {{
-                            beginAtZero: true,
-                            title: {{
-                                display: true,
-                                text: 'Number of Dogs',
-                                font: {{ size: 12, weight: 600 }}
-                            }},
-                            grid: {{
-                                drawBorder: false,
-                                color: 'rgba(0, 0, 0, 0.05)'
-                            }}
-                        }},
-                        x: {{
-                            title: {{
-                                display: true,
-                                text: 'Date',
-                                font: {{ size: 12, weight: 600 }}
-                            }},
-                            grid: {{
-                                drawBorder: false,
-                                display: false
-                            }}
-                        }}
+                        y: {{ beginAtZero: true, title: {{ display: true, text: 'Number of Dogs' }} }},
+                        x: {{ title: {{ display: true, text: 'Date' }} }}
                     }}
                 }}
             }});
@@ -522,18 +249,16 @@ def graph_page():
 def graph_rescues():
     rows = fetch_rescues()
     labels, datasets_dict = rescues_rows_to_chart_data(rows)
-    last_update = get_last_updated_time(cache.rescues_timestamp)
-
-    colors = [
-        "#667eea",
-        "#764ba2",
-        "#f093fb",
-        "#4facfe",
-        "#00f2fe",
-        "#43e97b",
-        "#fa709a",
-        "#fee140",
-        "#30cfd0",
+    pastel_colors = [
+        "#FFB6B9",
+        "#FAD0C4",
+        "#A8E6CF",
+        "#DCEDC2",
+        "#FFD3B6",
+        "#FFAAA5",
+        "#84FAB0",
+        "#8FD3F4",
+        "#C6FFDD",
     ]
     chart_datasets = []
     for i, (key, values) in enumerate(datasets_dict.items()):
@@ -542,111 +267,38 @@ def graph_rescues():
                 "label": key,
                 "data": values,
                 "fill": False,
-                "borderColor": colors[i % len(colors)],
-                "backgroundColor": colors[i % len(colors)],
-                "tension": 0.4,
-                "borderWidth": 3 if key == "Total" else 2,
-                "pointRadius": 4 if key == "Total" else 3,
-                "pointBackgroundColor": colors[i % len(colors)],
-                "pointBorderColor": "#fff",
-                "pointBorderWidth": 2,
-                "pointHoverRadius": 6,
+                "borderColor": pastel_colors[i % len(pastel_colors)],
+                "tension": 0.3,
+                "borderWidth": 2 if key != "Total" else 3,
             }
         )
-
-    date_range = f"{labels[0]} to {labels[-1]}" if labels else "No data"
-
     return f"""
-    <!DOCTYPE html>
-    <html lang="en">
+    <html>
     <head>
-        <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Rescues Graph - Sad Dogs Analytics</title>
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
         <style>
-            {get_base_styles()}
+            body {{ font-family: Arial; margin: 40px; background: #fefefe; color: #333; }}
+            h2 {{ text-align: center; margin-bottom: 30px; }}
+            canvas {{ max-width: 100%; height: 400px; }}
         </style>
     </head>
     <body>
-        <div class="container">
-            <header>
-                <h1>🐕 Sad Dogs Analytics</h1>
-                <div class="header-info">
-                    <div class="last-updated">Updated: {last_update}</div>
-                </div>
-                {get_navigation("rescues")}
-            </header>
-            
-            <main>
-                <h2>Rescued Dogs by Island</h2>
-                <p style="color: #666; margin-bottom: 16px;">Dog rescue statistics across Canary Islands ({date_range})</p>
-                <div class="chart-container">
-                    <canvas id="chart"></canvas>
-                </div>
-            </main>
-            
-            <footer>
-                <p>Data refreshes daily at 8:00 AM • Last update: {last_update}</p>
-            </footer>
-        </div>
-        
+        <h2>Rescued Dogs by Island</h2>
+        <canvas id="chart"></canvas>
         <script>
             const labels = {json.dumps(labels)};
             const datasets = {json.dumps(chart_datasets)};
-            const ctx = document.getElementById("chart").getContext("2d");
-            new Chart(ctx, {{
+            new Chart(document.getElementById("chart"), {{
                 type: "line",
                 data: {{ labels: labels, datasets: datasets }},
                 options: {{
                     responsive: true,
-                    maintainAspectRatio: false,
-                    interaction: {{ mode: 'index', intersect: false }},
-                    plugins: {{
-                        legend: {{
-                            position: 'top',
-                            labels: {{
-                                font: {{ size: 12, weight: 600 }},
-                                padding: 16,
-                                usePointStyle: true,
-                                pointStyle: 'circle'
-                            }}
-                        }},
-                        tooltip: {{
-                            mode: 'index',
-                            intersect: false,
-                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                            titleFont: {{ size: 14, weight: 'bold' }},
-                            bodyFont: {{ size: 12 }},
-                            padding: 12,
-                            cornerRadius: 8,
-                            displayColors: true
-                        }}
-                    }},
+                    interaction: {{ mode: 'nearest', intersect: false }},
+                    plugins: {{ legend: {{ position: 'top' }}, tooltip: {{ mode: 'index', intersect: false }} }},
                     scales: {{
-                        y: {{
-                            beginAtZero: true,
-                            title: {{
-                                display: true,
-                                text: 'Total Dogs Rescued',
-                                font: {{ size: 12, weight: 600 }}
-                            }},
-                            grid: {{
-                                drawBorder: false,
-                                color: 'rgba(0, 0, 0, 0.05)'
-                            }}
-                        }},
-                        x: {{
-                            title: {{
-                                display: true,
-                                text: 'Date',
-                                font: {{ size: 12, weight: 600 }}
-                            }},
-                            grid: {{
-                                drawBorder: false,
-                                display: false
-                            }}
-                        }}
+                        y: {{ beginAtZero: true, title: {{ display: true, text: 'Total Dogs Rescued' }} }},
+                        x: {{ title: {{ display: true, text: 'Date' }} }}
                     }}
                 }}
             }});
