@@ -152,3 +152,4 @@ class CensusSpider(BaseSpider):
         self.validate_against_previous_census(previous, data_db)
 
         self.save_result(data_db)
+        yield data_db
