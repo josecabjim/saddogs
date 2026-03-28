@@ -1,31 +1,76 @@
 import json
 import os
 from collections import defaultdict
+from datetime import datetime, time
 
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
-from supabase import create_client
+from saddogs_database.client import DatabaseClient
 
 SUPABASE_URL = os.environ["SUPABASE_URL"]
 SUPABASE_PUBLISHABLE_KEY = os.environ["SUPABASE_PUBLISHABLE_KEY"]
 CENSUS_TABLE = "census"
 RESCUES_TABLE = "rescues"
 
-supabase = create_client(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY)
+
+db = DatabaseClient()
 app = FastAPI()
 
 
-# -------------------------
-# Fetch data from Supabase
-# -------------------------
-def fetch_data(table_name):
-    resp = (
-        supabase.table(table_name)
-        .select("*")
-        .order("created_at", desc=False)  # Changed ascending=True to desc=False
-        .execute()
-    )
-    return resp.data or []
+class DataCache:
+    """Cache for database queries with daily refresh at 8 AM"""
+
+    def __init__(self):
+        self.census_data = None
+        self.rescues_data = None
+        self.census_timestamp = None
+        self.rescues_timestamp = None
+
+    def _is_expired(self, timestamp):
+        """Check if cache expired (data changes at 8 AM daily)"""
+        if timestamp is None:
+            return True
+
+        now = datetime.now()
+        # If we're before 8 AM, cache is valid since yesterday 8 AM
+        # If we're after 8 AM, cache is valid until tomorrow 8 AM
+        cache_time = datetime.combine(now.date(), time(8, 0, 0))
+        if now.time() < time(8, 0, 0):
+            # Before 8 AM today - cache valid if it was set after 8 AM yesterday
+            cache_time = cache_time.replace(day=cache_time.day - 1)
+
+        return timestamp < cache_time
+
+    def get_census(self, fetch_func):
+        if self.census_data is None or self._is_expired(self.census_timestamp):
+            self.census_data = fetch_func()
+            self.census_timestamp = datetime.now()
+        return self.census_data
+
+    def get_rescues(self, fetch_func):
+        if self.rescues_data is None or self._is_expired(self.rescues_timestamp):
+            self.rescues_data = fetch_func()
+            self.rescues_timestamp = datetime.now()
+        return self.rescues_data
+
+
+cache = DataCache()
+
+
+def _fetch_census_db():
+    return db.census.get_all()
+
+
+def _fetch_rescues_db():
+    return db.rescues.get_all()
+
+
+def fetch_census():
+    return cache.get_census(_fetch_census_db)
+
+
+def fetch_rescues():
+    return cache.get_rescues(_fetch_rescues_db)
 
 
 # -------------------------
@@ -115,7 +160,7 @@ def make_ascii_table(rows):
 # -------------------------
 @app.get("/", response_class=HTMLResponse)
 def homepage():
-    data = fetch_data(CENSUS_TABLE)
+    data = fetch_census()
     table = make_ascii_table(data)
     return f"""
     <html>
@@ -136,7 +181,7 @@ def homepage():
 # -------------------------
 @app.get("/graph", response_class=HTMLResponse)
 def graph_page():
-    rows = fetch_data(CENSUS_TABLE)
+    rows = fetch_census()
     labels, datasets = rows_to_chart_data(rows)
     pastel_colors = [
         "#FFB6B9",
@@ -202,7 +247,7 @@ def graph_page():
 # -------------------------
 @app.get("/graph-rescues", response_class=HTMLResponse)
 def graph_rescues():
-    rows = fetch_data(RESCUES_TABLE)
+    rows = fetch_rescues()
     labels, datasets_dict = rescues_rows_to_chart_data(rows)
     pastel_colors = [
         "#FFB6B9",

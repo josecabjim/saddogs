@@ -1,20 +1,18 @@
-[project]
-name = "saddogs-database"
+[tool.poetry]
+name = "saddogs-api"
 version = "0.1.0"
 description = ""
-authors = [
-    {name = "Jose Caballero",email = "jose.caballero@epicgames.com"}
-]
+authors = ["Jose Caballero <jose.caballero@epicgames.com>"]
 readme = "README.md"
-requires-python = ">=3.12"
-dependencies = [
-    "supabase (>=2.28.0,<3.0.0)",
-    "fastapi (>=0.129.2,<0.130.0)",
-    "uvicorn (>=0.41.0,<0.42.0)"
-]
+packages = [{include = "saddogs_api"}]
 
-[tool.poetry]
-packages = [{include = "saddogs-api"}]
+[tool.poetry.dependencies]
+python = ">=3.12"
+fastapi = "^0.129.2"
+uvicorn = "^0.41.0"
+supabase = "^2.28.0"
+saddogs-database = { path = "../../packages/saddogs-database" }
+
 
 
 [build-system]
