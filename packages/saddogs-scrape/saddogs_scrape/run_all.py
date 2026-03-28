@@ -43,29 +43,29 @@ class SpiderMonitor:
         spider_name = spider.name
 
         summary = {
+            "name": spider_name,
             "reason": reason,
             "items_scraped": stats.get("item_scraped_count", 0),
             "requests": stats.get("downloader/request_count", 0),
             "responses": stats.get("downloader/response_count", 0),
-            "http_errors": stats.get("downloader/response_status_count/500", 0)
-            + stats.get("downloader/response_status_count/404", 0),
             "download_failures": stats.get("downloader/exception_count", 0),
             "spider_exceptions": stats.get("spider_exceptions/count", 0),
             "retry_count": stats.get("retry/count", 0),
             "dupe_filtered": stats.get("dupefilter/filtered", 0),
+            "duration_seconds": stats.get("elapsed_time_seconds"),
         }
 
-        # include detailed exception types if present
+        # HTTP error aggregation
+        summary["http_errors"] = stats.get(
+            "downloader/response_status_count/500", 0
+        ) + stats.get("downloader/response_status_count/404", 0)
+
         if stats.get("spider_exceptions"):
             summary["exception_types"] = stats["spider_exceptions"]
 
-        # optional: capture a few log lines if you want later
-
-        # define health rules
         errors = []
 
-        # --- CRITICAL ISSUES (almost always broken spiders) ---
-
+        # --- CRITICAL ---
         if reason != "finished":
             errors.append(f"CRITICAL: Spider closed with reason '{reason}'")
 
@@ -80,9 +80,8 @@ class SpiderMonitor:
                 f"CRITICAL: High download failures ({summary['download_failures']})"
             )
 
-        # --- HIGH SEVERITY (likely broken or degraded) ---
-
-        if summary["download_failures"] > 0:
+        # --- HIGH ---
+        if summary["download_failures"] > 5:
             errors.append(
                 f"HIGH: Excessive download failures ({summary['download_failures']})"
             )
@@ -96,8 +95,7 @@ class SpiderMonitor:
         if summary["requests"] > 0 and summary["responses"] == 0:
             errors.append("HIGH: Requests made but no responses received")
 
-        # --- WARNING (suspicious / degraded behavior) ---
-
+        # --- WARNING ---
         if summary["items_scraped"] < 3:
             errors.append(f"WARNING: Very low item count ({summary['items_scraped']})")
 
@@ -117,8 +115,7 @@ class SpiderMonitor:
                 f"WARNING: Low response rate ({summary['responses']}/{summary['requests']})"
             )
 
-        # --- INFO / DEBUG SIGNALS (useful context, not failures) ---
-
+        # --- INFO ---
         if summary["items_scraped"] > 0 and summary["requests"] > 0:
             efficiency = summary["items_scraped"] / summary["requests"]
             if efficiency < 0.05:
@@ -126,17 +123,26 @@ class SpiderMonitor:
                     f"INFO: Low scrape efficiency ({summary['items_scraped']} items / {summary['requests']} requests)"
                 )
 
-        if summary.get("duration_seconds"):
-            if summary["duration_seconds"] > 300:
-                errors.append(
-                    f"INFO: Slow spider runtime ({summary['duration_seconds']:.2f}s)"
-                )
+        if summary.get("duration_seconds") and summary["duration_seconds"] > 300:
+            errors.append(f"INFO: Slow runtime ({summary['duration_seconds']:.2f}s)")
 
-        if errors:
-            summary["errors"] = errors
-            self.failed_spiders[spider_name] = summary
+        summary["errors"] = errors
+
+        # --- Severity classification ---
+        if any(e.startswith("CRITICAL") for e in errors):
+            summary["severity"] = "critical"
+        elif any(e.startswith("HIGH") for e in errors):
+            summary["severity"] = "high"
+        elif any(e.startswith("WARNING") for e in errors):
+            summary["severity"] = "warning"
         else:
-            self.successful_spiders.append(summary)
+            summary["severity"] = "success"
+
+        # store everything (IMPORTANT: replace old success/failed logic)
+        if not hasattr(self, "results"):
+            self.results = {}
+
+        self.results[spider_name] = summary
 
 
 def load_spiders(spider_filter=None):
@@ -274,10 +280,7 @@ if __name__ == "__main__":
         if monitor.failed_spiders:
             logger.error(f"Failed spiders: {len(monitor.failed_spiders)}")
             logger.error(monitor.failed_spiders)
-            send_failure_email(
-                failed_spiders=monitor.failed_spiders,
-                subject="Spider Health Alert",
-            )
+            send_failure_email(results=monitor.results)
         else:
             logger.info("All spiders completed successfully.")
 

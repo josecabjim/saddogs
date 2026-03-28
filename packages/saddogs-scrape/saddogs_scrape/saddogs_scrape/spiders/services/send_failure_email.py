@@ -4,28 +4,14 @@ import json
 import logging
 import os
 import smtplib
-from datetime import date
 from email.mime.text import MIMEText
-from typing import Dict
 
 logger = logging.getLogger(__name__)
 REPORT_FILE = "scrape_report.json"
 
 
-def send_failure_email(failed_spiders: Dict[str, str], subject: str = None) -> bool:
-    """
-    Send an email notification for spider failures.
-
-    Args:
-        failed_spiders: Dict mapping spider name to error(s)
-        subject: Custom email subject (optional)
-
-    Returns:
-        True if sent successfully, False otherwise
-    """
-    if not failed_spiders:
-        logger.info("No failures to report")
-        return True
+def send_failure_email(results: dict, subject: str = None) -> bool:
+    logger = logging.getLogger(__name__)
 
     try:
         email_from = os.environ.get("EMAIL_FROM")
@@ -33,32 +19,77 @@ def send_failure_email(failed_spiders: Dict[str, str], subject: str = None) -> b
         email_password = os.environ.get("EMAIL_PASSWORD")
 
         if not all([email_from, email_to, email_password]):
-            logger.warning(
-                "Email env vars not configured (EMAIL_FROM, EMAIL_TO, EMAIL_PASSWORD). Skipping email."
-            )
+            logger.warning("Email env vars not configured. Skipping email.")
             return False
 
+        # --- classify ---
+        critical = []
+        high = []
+        warning = []
+        success = []
+
+        for name, data in results.items():
+            sev = data.get("severity")
+            if sev == "critical":
+                critical.append((name, data))
+            elif sev == "high":
+                high.append((name, data))
+            elif sev == "warning":
+                warning.append((name, data))
+            else:
+                success.append((name, data))
+
+        # --- build email ---
         body = "🚨 Saddogs Spider Health Report\n\n"
-        for spider, data in failed_spiders.items():
-            body += f"--- {spider} ---\n"
-            body += f"Reason: {data.get('reason')}\n"
-            body += f"Items scraped: {data.get('items_scraped')}\n"
-            body += f"Requests: {data.get('requests')}\n"
-            body += f"Download failures: {data.get('download_failures')}\n"
-            body += f"Spider exceptions: {data.get('spider_exceptions')}\n"
 
-            if data.get("exception_types"):
-                body += f"Exception types: {data['exception_types']}\n"
+        # summary
+        body += "Summary\n-------\n"
+        body += f"❌ Critical: {len(critical)}\n"
+        body += f"🔥 High: {len(high)}\n"
+        body += f"⚠️ Warning: {len(warning)}\n"
+        body += f"✅ Healthy: {len(success)}\n"
+        body += f"Total: {len(results)}\n\n"
 
-            if data.get("errors"):
-                body += "Errors:\n"
-                for err in data["errors"]:
-                    body += f"  - {err}\n"
+        # --- CRITICAL ---
+        if critical:
+            body += "❌ CRITICAL ISSUES\n------------------\n\n"
+            for name, data in critical:
+                body += f"{name}\n"
+                for err in data.get("errors", []):
+                    if err.startswith(("CRITICAL", "HIGH")):
+                        body += f"  - ❌ {err}\n"
+                body += "\n"
 
-            body += "\n"
+        # --- HIGH ---
+        if high:
+            body += "\n🔥 HIGH ISSUES\n--------------\n\n"
+            for name, data in high:
+                body += f"{name}\n"
+                for err in data.get("errors", []):
+                    if err.startswith("HIGH"):
+                        body += f"  - 🔥 {err}\n"
+                body += "\n"
 
+        # --- collapse common warnings ---
+        low_item_spiders = [
+            name
+            for name, data in warning
+            if any("Very low item count" in e for e in data.get("errors", []))
+        ]
+
+        if low_item_spiders:
+            body += "\n⚠️ WARNINGS\n-----------\n\n"
+            body += (
+                f"{len(low_item_spiders)} spiders returned very low item counts:\n  "
+            )
+            body += ", ".join(low_item_spiders[:10])
+            if len(low_item_spiders) > 10:
+                body += " ..."
+            body += "\n\n"
+
+        # --- send ---
         msg = MIMEText(body)
-        msg["Subject"] = subject or f"Saddogs Scraper Failure ({date.today()})"
+        msg["Subject"] = subject or "Saddogs Spider Health Alert"
         msg["From"] = email_from
         msg["To"] = email_to
 
