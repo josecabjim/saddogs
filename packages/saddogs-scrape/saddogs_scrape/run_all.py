@@ -169,44 +169,100 @@ def load_spiders(spider_filter=None):
     return spiders_list
 
 
-def run_all_spiders(spider_filter=None, verbose=False, dry_run=False):
-    """Run all spiders with robust monitoring and optional dry-run mode."""
-    configure_logging({"LOG_LEVEL": "DEBUG" if verbose else "INFO"})
-    logger = logging.getLogger(__name__)
-
+def run_spiders(spider_classes, verbose=False, dry_run=False):
+    """Run a specific list of spider classes. Returns a SpiderMonitor."""
     settings = get_project_settings()
     process = CrawlerProcess(settings)
-
     monitor = SpiderMonitor()
-    spiders_list = load_spiders(spider_filter)
-    logger.info(f"Spiders loaded: {[spider.__name__ for spider in spiders_list]}")
 
-    if not spiders_list:
-        logger.warning("No spiders found to run.")
-        return monitor
-
-    logger.info(f"Found {len(spiders_list)} spider(s) to run.")
-
-    for spider_class in spiders_list:
+    for spider_class in spider_classes:
         try:
-            spider_name = getattr(spider_class, "name", spider_class.__name__)
-            logger.info(f"Scheduling spider: {spider_name}")
             crawler = process.create_crawler(spider_class)
             crawler.signals.connect(monitor.spider_closed, signal=signals.spider_closed)
             process.crawl(crawler, dry_run=dry_run)
         except Exception as e:
-            logger.error(f"Failed to schedule spider {spider_class.name}: {e}")
-            monitor.failed_spiders[spider_class.name] = str(e)
+            spider_name = getattr(spider_class, "name", spider_class.__name__)
+            logging.getLogger(__name__).error(f"Failed to schedule {spider_name}: {e}")
+            if not hasattr(monitor, "results"):
+                monitor.results = {}
+            monitor.results[spider_name] = {
+                "name": spider_name,
+                "severity": "critical",
+                "errors": [f"CRITICAL: Failed to schedule - {e}"],
+                "items_scraped": 0,
+            }
 
-    logger.info("Starting crawler process...")
-
-    start_time = time.time()
     process.start()
-    duration = time.time() - start_time
-
-    logger.info(f"Crawler process completed in {duration:.2f}s.")
-
     return monitor
+
+
+def run_all_spiders(
+    spider_filter=None, verbose=False, dry_run=False, max_attempts=3, retry_delay=60
+):
+    configure_logging({"LOG_LEVEL": "DEBUG" if verbose else "INFO"})
+    logger = logging.getLogger(__name__)
+
+    all_spider_classes = load_spiders(spider_filter)
+    logger.info(f"Spiders to run: {[s.__name__ for s in all_spider_classes]}")
+
+    if not all_spider_classes:
+        logger.warning("No spiders found.")
+        return SpiderMonitor()
+
+    # Map name -> class for easy lookup during retries
+    spider_class_map = {
+        getattr(cls, "name", cls.__name__): cls for cls in all_spider_classes
+    }
+
+    combined_results = {}
+    spiders_to_run = all_spider_classes
+
+    for attempt in range(1, max_attempts + 1):
+        logger.info(f"--- Attempt {attempt}/{max_attempts} ---")
+
+        monitor = run_spiders(spiders_to_run, verbose=verbose, dry_run=dry_run)
+        results = getattr(monitor, "results", {})
+
+        # Merge results — only overwrite if this attempt did better
+        for name, result in results.items():
+            prev = combined_results.get(name)
+            # Keep the best result seen across attempts
+            severity_rank = {"success": 0, "warning": 1, "high": 2, "critical": 3}
+            if (
+                prev is None
+                or severity_rank[result["severity"]] < severity_rank[prev["severity"]]
+            ):
+                combined_results[name] = result
+
+        # Find spiders that still need retrying
+        failed_names = {
+            name
+            for name, r in combined_results.items()
+            if r["severity"] in ("critical", "high")
+        }
+
+        if not failed_names:
+            logger.info("All spiders healthy — stopping early.")
+            break
+
+        if attempt < max_attempts:
+            logger.warning(
+                f"{len(failed_names)} spider(s) failed: {failed_names}. "
+                f"Retrying in {retry_delay}s..."
+            )
+            time.sleep(retry_delay)
+            spiders_to_run = [
+                spider_class_map[n] for n in failed_names if n in spider_class_map
+            ]
+        else:
+            logger.error(
+                f"Giving up after {max_attempts} attempts. Still failing: {failed_names}"
+            )
+
+    # Attach final merged results to a monitor object for compatibility
+    final_monitor = SpiderMonitor()
+    final_monitor.results = combined_results
+    return final_monitor
 
 
 def write_report(monitor):
@@ -260,6 +316,13 @@ if __name__ == "__main__":
         help="Run spiders without saving results to the database.",
     )
 
+    parser.add_argument(
+        "--max-attempts", type=int, default=3, help="Max retry attempts per spider"
+    )
+    parser.add_argument(
+        "--retry-delay", type=int, default=60, help="Seconds to wait between retries"
+    )
+
     args = parser.parse_args()
 
     try:
@@ -267,6 +330,8 @@ if __name__ == "__main__":
             spider_filter=args.spider,
             verbose=args.verbose,
             dry_run=args.dry_run,
+            max_attempts=args.max_attempts,
+            retry_delay=args.retry_delay,
         )
 
         write_report(monitor)
