@@ -441,26 +441,30 @@
 
   async function load() {
     try {
+      const START_DATE = "2026-03-14"; // March 14th
+  
       // Load census data
       const { data: censusData, error: censusError } = await client
         .from("census")
         .select("*")
+        .gte("created_at", START_DATE)
         .order("created_at", { ascending: true });
-
+  
       if (censusError) throw censusError;
-
+  
       const { labels: censusLabels, datasets: censusDatasets } = processCensusData(censusData);
-
+  
       // Load rescues data
       const { data: rescuesData, error: rescuesError } = await client
         .from("rescues")
         .select("*")
+        .gte("created_at", START_DATE)
         .order("created_at", { ascending: true });
-
+  
       if (rescuesError) throw rescuesError;
-
+  
       const { labels: rescuesLabels, datasets: rescuesDatasets } = processRescuesData(rescuesData);
-
+      
       // Update header
       const lastDate = censusLabels[censusLabels.length - 1] || "No data";
       const dateRange = `${censusLabels[0]} to ${lastDate}`;
