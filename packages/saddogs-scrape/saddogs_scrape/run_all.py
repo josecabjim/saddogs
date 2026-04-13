@@ -169,33 +169,6 @@ def load_spiders(spider_filter=None):
     return spiders_list
 
 
-def run_spiders(spider_classes, verbose=False, dry_run=False):
-    """Run a specific list of spider classes. Returns a SpiderMonitor."""
-    settings = get_project_settings()
-    process = CrawlerProcess(settings)
-    monitor = SpiderMonitor()
-
-    for spider_class in spider_classes:
-        try:
-            crawler = process.create_crawler(spider_class)
-            crawler.signals.connect(monitor.spider_closed, signal=signals.spider_closed)
-            process.crawl(crawler, dry_run=dry_run)
-        except Exception as e:
-            spider_name = getattr(spider_class, "name", spider_class.__name__)
-            logging.getLogger(__name__).error(f"Failed to schedule {spider_name}: {e}")
-            if not hasattr(monitor, "results"):
-                monitor.results = {}
-            monitor.results[spider_name] = {
-                "name": spider_name,
-                "severity": "critical",
-                "errors": [f"CRITICAL: Failed to schedule - {e}"],
-                "items_scraped": 0,
-            }
-
-    process.start()
-    return monitor
-
-
 def run_all_spiders(
     spider_filter=None, verbose=False, dry_run=False, max_attempts=3, retry_delay=60
 ):
@@ -209,59 +182,76 @@ def run_all_spiders(
         logger.warning("No spiders found.")
         return SpiderMonitor()
 
-    # Map name -> class for easy lookup during retries
     spider_class_map = {
         getattr(cls, "name", cls.__name__): cls for cls in all_spider_classes
     }
-
+    severity_rank = {"success": 0, "warning": 1, "high": 2, "critical": 3}
     combined_results = {}
-    spiders_to_run = all_spider_classes
+    attempt_counts = {name: 0 for name in spider_class_map}
 
-    for attempt in range(1, max_attempts + 1):
-        logger.info(f"--- Attempt {attempt}/{max_attempts} ---")
+    settings = get_project_settings()
+    process = CrawlerProcess(settings)
+    monitor = SpiderMonitor()
 
-        monitor = run_spiders(spiders_to_run, verbose=verbose, dry_run=dry_run)
-        results = getattr(monitor, "results", {})
+    def schedule_spider(spider_class):
+        spider_name = getattr(spider_class, "name", spider_class.__name__)
+        attempt_counts[spider_name] = attempt_counts.get(spider_name, 0) + 1
+        try:
+            crawler = process.create_crawler(spider_class)
+            crawler.signals.connect(monitor.spider_closed, signal=signals.spider_closed)
 
-        # Merge results — only overwrite if this attempt did better
-        for name, result in results.items():
-            prev = combined_results.get(name)
-            # Keep the best result seen across attempts
-            severity_rank = {"success": 0, "warning": 1, "high": 2, "critical": 3}
-            if (
-                prev is None
-                or severity_rank[result["severity"]] < severity_rank[prev["severity"]]
-            ):
-                combined_results[name] = result
+            def on_closed(spider, reason, _cls=spider_class, _name=spider_name):
+                from twisted.internet import reactor
 
-        # Find spiders that still need retrying
-        failed_names = {
-            name
-            for name, r in combined_results.items()
-            if r["severity"] in ("critical", "high")
-        }
+                def maybe_retry():
+                    result = getattr(monitor, "results", {}).get(_name)
+                    if not result:
+                        return
+                    current_attempt = attempt_counts[_name]
+                    if (
+                        result["severity"] in ("critical", "high")
+                        and current_attempt < max_attempts
+                    ):
+                        logger.warning(
+                            f"{_name} failed (attempt {current_attempt}/{max_attempts}), "
+                            f"retrying in {retry_delay}s..."
+                        )
+                        reactor.callLater(retry_delay, schedule_spider, _cls)
 
-        if not failed_names:
-            logger.info("All spiders healthy — stopping early.")
-            break
+                reactor.callLater(0, maybe_retry)
 
-        if attempt < max_attempts:
-            logger.warning(
-                f"{len(failed_names)} spider(s) failed: {failed_names}. "
-                f"Retrying in {retry_delay}s..."
-            )
-            time.sleep(retry_delay)
-            spiders_to_run = [
-                spider_class_map[n] for n in failed_names if n in spider_class_map
-            ]
-        else:
-            logger.error(
-                f"Giving up after {max_attempts} attempts. Still failing: {failed_names}"
-            )
+            crawler.signals.connect(on_closed, signal=signals.spider_closed)
+            process.crawl(crawler, dry_run=dry_run)
+        except Exception as e:
+            logger.error(f"Failed to schedule {spider_name}: {e}")
+            if not hasattr(monitor, "results"):
+                monitor.results = {}
+            monitor.results[spider_name] = {
+                "name": spider_name,
+                "severity": "critical",
+                "errors": [f"CRITICAL: Failed to schedule - {e}"],
+                "items_scraped": 0,
+            }
 
-    # Attach final merged results to a monitor object for compatibility
+    for spider_class in all_spider_classes:
+        schedule_spider(spider_class)
+
+    process.start()  # called exactly once
+
+    # Use monitor.results directly — it's populated by spider_closed signals
     final_monitor = SpiderMonitor()
-    final_monitor.results = combined_results
+    final_monitor.results = getattr(monitor, "results", {})
+
+    # Flag anything that never showed up at all
+    for name in spider_class_map:
+        if name not in final_monitor.results:
+            final_monitor.results[name] = {
+                "name": name,
+                "severity": "critical",
+                "errors": ["CRITICAL: Spider never completed"],
+                "items_scraped": 0,
+            }
+
     return final_monitor
 
 
