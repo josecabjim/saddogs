@@ -1,8 +1,6 @@
-def validate_count(spider_name: str, count: int):
-
+def validate_count(spider_name, count):
     if count <= 0:
         raise ValueError(f"{spider_name} returned invalid count: {count}")
-
     if count < 2:
         raise ValueError(f"{spider_name} suspiciously low count: {count}")
 

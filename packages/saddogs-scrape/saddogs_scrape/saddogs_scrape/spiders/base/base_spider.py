@@ -32,6 +32,9 @@ class BaseRescueSpider(BaseSpider):
             return None
 
     def save_result(self, count):
+        if count <= 0:
+            self.logger.warning(f"Got zero count, skipping save")
+            return  # yields nothing → item_scraped_count stays 0 → monitor retries it
 
         validate_count(self.name, count)
 
