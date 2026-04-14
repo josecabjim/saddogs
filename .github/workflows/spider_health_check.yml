@@ -26,9 +26,6 @@ jobs:
           cd packages/saddogs-scrape
           poetry install
           poetry run playwright install chromium
-      - name: Add hosts entry for flaky domains
-        run: |
-          echo "178.33.166.191 albergueanimalesteguise.com" | sudo tee -a /etc/hosts
       - name: Run health check
         env:
           EMAIL_FROM: ${{ secrets.EMAIL_FROM }}

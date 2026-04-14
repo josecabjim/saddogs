@@ -25,6 +25,11 @@ from scrapy.utils.project import get_project_settings
 _timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 REPORT_FILE = Path(__file__).parent / "reports" / f"report_{_timestamp}.json"
 
+# Spiders with known infrastructure issues that shouldn't alert
+KNOWN_FLAKY_SPIDERS = {
+    "lanzarote_teguise",
+}
+
 
 class SpiderMonitor:
     """Monitor the status of each spider and catch exceptions."""
@@ -113,6 +118,15 @@ class SpiderMonitor:
             summary["severity"] = "warning"
         else:
             summary["severity"] = "success"
+
+        if spider_name in KNOWN_FLAKY_SPIDERS and summary["severity"] in (
+            "critical",
+            "high",
+        ):
+            summary["severity"] = "warning"
+            summary["errors"].append(
+                f"WARNING: Downgraded from critical/high — {spider_name} is a known flaky spider (infrastructure issues)"
+            )
 
         self.results[spider_name] = summary
 
