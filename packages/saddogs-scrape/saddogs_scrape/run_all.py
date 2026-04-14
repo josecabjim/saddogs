@@ -32,10 +32,9 @@ KNOWN_FLAKY_SPIDERS = {
 
 
 class SpiderMonitor:
-    """Monitor the status of each spider and catch exceptions."""
-
-    def __init__(self):
+    def __init__(self, retry_callback=None):
         self.results = {}
+        self.retry_callback = retry_callback
 
     def spider_closed(self, spider, reason):
         crawler = getattr(spider, "crawler", None)
@@ -130,6 +129,9 @@ class SpiderMonitor:
 
         self.results[spider_name] = summary
 
+        if self.retry_callback:
+            self.retry_callback(spider_name, summary)
+
 
 def load_spiders(spider_filter=None):
     spiders_list = []
@@ -170,12 +172,46 @@ def run_all_spiders(
     best_results = {}  # tracks best result per spider across all attempts
 
     settings = get_project_settings()
-    process = CrawlerProcess(settings)
-    monitor = SpiderMonitor()
 
-    def schedule_spider(spider_class):
+    process = CrawlerProcess(settings)
+
+    def handle_retry(spider_name, result):
         from twisted.internet import reactor
 
+        prev = best_results.get(spider_name)
+        if (
+            prev is None
+            or severity_rank[result["severity"]] < severity_rank[prev["severity"]]
+        ):
+            best_results[spider_name] = result
+
+        if (
+            result["severity"] in ("critical", "high")
+            and attempt_counts[spider_name] < max_attempts
+        ):
+            logger.warning(
+                f"{spider_name} failed with severity '{result['severity']}' "
+                f"(attempt {attempt_counts[spider_name]}/{max_attempts}), "
+                f"retrying in {retry_delay}s..."
+            )
+            reactor.callLater(
+                retry_delay,
+                schedule_spider,
+                spider_class_map[spider_name],
+            )
+        else:
+            if result["severity"] in ("critical", "high"):
+                logger.error(
+                    f"{spider_name} gave up after {attempt_counts[spider_name]} attempts."
+                )
+            else:
+                logger.info(
+                    f"{spider_name} succeeded on attempt {attempt_counts[spider_name]}."
+                )
+
+    monitor = SpiderMonitor(retry_callback=handle_retry)
+
+    def schedule_spider(spider_class):
         spider_name = getattr(spider_class, "name", spider_class.__name__)
         attempt_counts[spider_name] += 1
         logger.info(
@@ -184,47 +220,7 @@ def run_all_spiders(
 
         try:
             crawler = process.create_crawler(spider_class)
-
-            def on_closed(spider, reason, _cls=spider_class, _name=spider_name):
-                # Defer until after monitor.spider_closed has fired
-                def maybe_retry():
-                    result = monitor.results.get(_name)
-                    if result is None:
-                        return
-
-                    # Keep best result seen across attempts
-                    prev = best_results.get(_name)
-                    if (
-                        prev is None
-                        or severity_rank[result["severity"]]
-                        < severity_rank[prev["severity"]]
-                    ):
-                        best_results[_name] = result
-
-                    if (
-                        result["severity"] in ("critical", "high")
-                        and attempt_counts[_name] < max_attempts
-                    ):
-                        logger.warning(
-                            f"{_name} failed with severity '{result['severity']}' "
-                            f"(attempt {attempt_counts[_name]}/{max_attempts}), "
-                            f"retrying in {retry_delay}s..."
-                        )
-                        reactor.callLater(retry_delay, schedule_spider, _cls)
-                    else:
-                        if result["severity"] in ("critical", "high"):
-                            logger.error(
-                                f"{_name} gave up after {attempt_counts[_name]} attempts."
-                            )
-                        else:
-                            logger.info(
-                                f"{_name} succeeded on attempt {attempt_counts[_name]}."
-                            )
-
-                reactor.callLater(0, maybe_retry)
-
             crawler.signals.connect(monitor.spider_closed, signal=signals.spider_closed)
-            crawler.signals.connect(on_closed, signal=signals.spider_closed)
             process.crawl(crawler, dry_run=dry_run)
 
         except Exception as e:
