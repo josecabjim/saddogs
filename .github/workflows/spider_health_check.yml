@@ -26,12 +26,9 @@ jobs:
           cd packages/saddogs-scrape
           poetry install
           poetry run playwright install chromium
-      - name: Diagnose DNS
+      - name: Add hosts entry for flaky domains
         run: |
-          cat /etc/resolv.conf
-          nslookup albergueanimalesteguise.com 8.8.8.8 || echo "FAILED: Google DNS"
-          nslookup albergueanimalesteguise.com 1.1.1.1 || echo "FAILED: Cloudflare DNS"
-          curl -v --max-time 10 https://albergueanimalesteguise.com/Nuestros-Animales || echo "FAILED: curl"
+          echo "178.33.166.191 albergueanimalesteguise.com" | sudo tee -a /etc/hosts
       - name: Run health check
         env:
           EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
