@@ -3,9 +3,7 @@
 import sys
 
 from saddogs_scrape.check_missing import get_missing_spider_names
-from saddogs_scrape.saddogs_scrape.spiders.services.send_failure_email import (
-    send_failure_email,
-)
+from saddogs_scrape.spiders.services.send_failure_email import send_failure_email
 
 if __name__ == "__main__":
     missing = get_missing_spider_names()

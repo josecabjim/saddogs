@@ -3,7 +3,7 @@
 import sys
 
 from saddogs_database.client import DatabaseClient
-from saddogs_scrape.saddogs_scrape.spider_runner import load_spiders
+from saddogs_scrape.spider_runner import load_spiders
 
 
 def get_missing_spider_names() -> list[str]:
@@ -40,4 +40,5 @@ if __name__ == "__main__":
         print("__none__")
         sys.exit(0)
     for name in missing:
+        print(name)
         print(name)

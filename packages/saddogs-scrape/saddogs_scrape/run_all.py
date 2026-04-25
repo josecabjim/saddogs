@@ -7,7 +7,7 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-from saddogs_scrape.saddogs_scrape.spider_runner import run_all_spiders
+from saddogs_scrape.spider_runner import run_all_spiders
 
 _timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 REPORT_FILE = Path(__file__).parent / "reports" / f"report_{_timestamp}.json"

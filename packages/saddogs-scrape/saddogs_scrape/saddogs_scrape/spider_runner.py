@@ -4,7 +4,7 @@ import importlib
 import logging
 import pkgutil
 
-import saddogs_scrape.saddogs_scrape.spiders as spiders_pkg
+import saddogs_scrape.spiders as spiders_pkg
 from scrapy import Spider, signals
 from scrapy.crawler import CrawlerProcess
 from scrapy.utils.log import configure_logging
