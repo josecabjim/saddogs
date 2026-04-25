@@ -2,15 +2,50 @@ name: Daily Scrape
 
 on:
   schedule:
-    - cron: "30 6 * * *"  # daily at 06:30 UTC
-  workflow_dispatch:     # allows manual runs
+    - cron: "0 */4 * * *"   # every 4 hours: 00:00, 04:00 ... 20:00 UTC
+    - cron: "0 22 * * *"    # daily summary at 22:00 UTC
+  workflow_dispatch:
 
 env:
   PYTHON_VERSION: "3.12"
   POETRY_VERSION: "2.3.0"
 
 jobs:
-  scrape_daily:
+  check_missing:
+    if: github.event.schedule != '0 22 * * *'
+    runs-on: ubuntu-latest
+    outputs:
+      missing_spiders: ${{ steps.check.outputs.missing_spiders }}
+      has_missing: ${{ steps.check.outputs.has_missing }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - uses: snok/install-poetry@v1
+        with:
+          version: ${{ env.POETRY_VERSION }}
+          virtualenvs-in-project: true
+      - run: cd packages/saddogs-scrape && poetry install
+      - name: Check which rescues are missing today
+        id: check
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          cd packages/saddogs-scrape/saddogs_scrape
+          OUTPUT=$(poetry run python check_missing.py)
+          if [ "$OUTPUT" = "__none__" ]; then
+            echo "has_missing=false" >> $GITHUB_OUTPUT
+          else
+            SPIDERS=$(echo "$OUTPUT" | paste -sd ',' -)
+            echo "has_missing=true" >> $GITHUB_OUTPUT
+            echo "missing_spiders=$SPIDERS" >> $GITHUB_OUTPUT
+          fi
+
+  scrape:
+    needs: check_missing
+    if: needs.check_missing.outputs.has_missing == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -25,9 +60,37 @@ jobs:
           cd packages/saddogs-scrape
           poetry install
           poetry run playwright install chromium
-      - run: |
-          cd packages/saddogs-scrape/saddogs_scrape
-          poetry run python run_all.py
+      - name: Run missing spiders
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          MISSING: ${{ needs.check_missing.outputs.missing_spiders }}
+        run: |
+          cd packages/saddogs-scrape/saddogs_scrape
+          EXIT_CODE=0
+          IFS=',' read -ra SPIDER_NAMES <<< "$MISSING"
+          for SPIDER in "${SPIDER_NAMES[@]}"; do
+            poetry run python run_all.py --spider "$SPIDER" || EXIT_CODE=$?
+          done
+          exit $EXIT_CODE
+
+  daily_summary:
+    if: github.event.schedule == '0 22 * * *'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - uses: snok/install-poetry@v1
+        with:
+          version: ${{ env.POETRY_VERSION }}
+          virtualenvs-in-project: true
+      - run: cd packages/saddogs-scrape && poetry install
+      - name: Send summary email if any rescues still missing
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          cd packages/saddogs-scrape/saddogs_scrape
+          poetry run python daily_summary.py

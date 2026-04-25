@@ -4,7 +4,7 @@ version = "0.1.0"
 description = ""
 authors = ["Jose Caballero <jose.caballero@epicgames.com>"]
 readme = "README.md"
-packages = [{ include = "saddogs_scrape" }]
+packages = [{ include = "saddogs_scrape", from = "saddogs_scrape" }]
 
 [tool.poetry.dependencies]
 python = ">=3.12"

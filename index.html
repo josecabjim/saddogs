@@ -289,7 +289,6 @@
   const SUPABASE_KEY = "sb_publishable_uDJ7_smtnDquaKX4VMh8EA_O18behoj";
 
   const { createClient } = supabase;
-
   const client = createClient(SUPABASE_URL, SUPABASE_KEY);
 
   const colors = [
@@ -298,80 +297,128 @@
     "#fa709a", "#fee140", "#30cfd0"
   ];
 
-  function processCensusData(rows) {
-    const seen = new Set();
-    const filtered = [];
+  // Returns an array of "YYYY-MM-DD" strings for every day from start to end inclusive.
+  function dateRange(start, end) {
+    const dates = [];
+    const cur = new Date(start + "T00:00:00Z");
+    const last = new Date(end + "T00:00:00Z");
+    while (cur <= last) {
+      dates.push(cur.toISOString().slice(0, 10));
+      cur.setUTCDate(cur.getUTCDate() + 1);
+    }
+    return dates;
+  }
 
-    rows.forEach(r => {
+  function processCensusData(rows) {
+    // Keep only the FIRST entry per calendar day.
+    const seen = new Set();
+    const firstPerDay = [];
+    for (const r of rows) {
       const date = r.created_at.slice(0, 10);
       if (!seen.has(date)) {
         seen.add(date);
-        filtered.push(r);
+        firstPerDay.push({ ...r, _date: date });
       }
-    });
+    }
 
-    const labels = filtered.map(r => r.created_at.slice(0, 10));
+    if (!firstPerDay.length) return { labels: [], datasets: {} };
 
     const skip = ["id", "created_at"];
+    const columns = Object.keys(firstPerDay[0]).filter(c => !skip.includes(c) && c !== "_date");
 
-    const numeric = Object.keys(filtered[0])
-      .filter(c => !skip.includes(c));
+    // Build a map of date → row for forward-fill
+    const byDate = {};
+    for (const r of firstPerDay) byDate[r._date] = r;
+
+    const allDates = dateRange(firstPerDay[0]._date, firstPerDay[firstPerDay.length - 1]._date);
 
     const datasets = {};
+    columns.forEach(col => datasets[col] = []);
+    datasets["Total"] = [];
 
-    numeric.forEach(col => {
-      datasets[col] = filtered.map(r => r[col]);
-    });
+    let lastRow = null;
+    for (const date of allDates) {
+      if (byDate[date]) lastRow = byDate[date];
+      // If lastRow is still null (shouldn't happen since we start from first known date), skip
+      if (!lastRow) continue;
 
-    datasets["Total"] = filtered.map(r =>
-      numeric.reduce((s, c) => s + r[c], 0)
-    );
+      let total = 0;
+      columns.forEach(col => {
+        const v = lastRow[col] ?? 0;
+        datasets[col].push(v);
+        total += v;
+      });
+      datasets["Total"].push(total);
+    }
 
-    return { labels, datasets };
+    return { labels: allDates, datasets };
   }
 
   function processRescuesData(rows) {
-    const aggregated = {};
+    if (!rows.length) return { labels: [], datasets: {} };
 
-    rows.forEach(r => {
+    // Step 1: for each (rescue_name, island, date) keep only the FIRST entry.
+    // rows are already ordered by created_at ascending.
+    const rescues = [...new Set(rows.map(r => `${r.rescue_name}__${r.island}`))];
+    const islands = [...new Set(rows.map(r => r.island))].sort();
+
+    const firstPerRescueDay = {};
+    for (const r of rows) {
       const date = r.created_at.slice(0, 10);
-      const island = r.island;
+      const key = `${r.rescue_name}__${r.island}__${date}`;
+      if (!firstPerRescueDay[key]) {
+        firstPerRescueDay[key] = { date, island: r.island, rescue_name: r.rescue_name, total_dogs: r.total_dogs };
+      }
+    }
+    const deduped = Object.values(firstPerRescueDay);
 
-      if (!aggregated[date]) aggregated[date] = {};
-      if (!aggregated[date][island]) aggregated[date][island] = 0;
+    // Step 2: index deduped entries by (rescue_key, date) for fast lookup.
+    const byRescueDate = {};
+    for (const r of deduped) {
+      const rescueKey = `${r.rescue_name}__${r.island}`;
+      if (!byRescueDate[rescueKey]) byRescueDate[rescueKey] = {};
+      byRescueDate[rescueKey][r.date] = r.total_dogs;
+    }
 
-      aggregated[date][island] += r.total_dogs;
-    });
+    // Step 3: build full date range.
+    const allKnownDates = deduped.map(r => r.date).sort();
+    const allDates = dateRange(allKnownDates[0], allKnownDates[allKnownDates.length - 1]);
 
-    const labels = Object.keys(aggregated).sort();
-
-    const islands =
-      [...new Set(rows.map(r => r.island))].sort();
+    // Step 4: for each date, forward-fill each rescue individually, then aggregate into islands.
+    const lastKnownPerRescue = {};  // rescue_key → last known total_dogs
 
     const datasets = {};
-
     islands.forEach(i => datasets[i] = []);
+    datasets["Total"] = [];
 
-    const totals = [];
+    for (const date of allDates) {
+      const islandTotals = {};
 
-    labels.forEach(date => {
-      let daily = 0;
+      for (const rescueKey of rescues) {
+        const island = rescueKey.split("__")[1];
+        const dayValue = byRescueDate[rescueKey]?.[date];
 
+        if (dayValue !== undefined) {
+          lastKnownPerRescue[rescueKey] = dayValue;
+        }
+
+        const v = lastKnownPerRescue[rescueKey] ?? 0;
+        islandTotals[island] = (islandTotals[island] || 0) + v;
+      }
+
+      let total = 0;
       islands.forEach(island => {
-        const v = aggregated[date][island] || 0;
+        const v = islandTotals[island] || 0;
         datasets[island].push(v);
-        daily += v;
+        total += v;
       });
+      datasets["Total"].push(total);
+    }
 
-      totals.push(daily);
-    });
-
-    datasets["Total"] = totals;
-
-    return { labels, datasets };
+    return { labels: allDates, datasets };
   }
 
-  function createChart(canvasId, title, labels, datasets) {
+  function createChart(canvasId, labels, datasets) {
     const chartDatasets =
       Object.entries(datasets).map(([k, v], i) => ({
         label: k,
@@ -389,7 +436,6 @@
       }));
 
     const ctx = document.getElementById(canvasId);
-    
     if (!ctx) return;
 
     new Chart(ctx, {
@@ -441,64 +487,59 @@
 
   async function load() {
     try {
-      const START_DATE = "2026-03-14"; // March 14th
-  
-      // Load census data
+      const START_DATE = "2026-03-14";
+
       const { data: censusData, error: censusError } = await client
         .from("census")
         .select("*")
         .gte("created_at", START_DATE)
         .order("created_at", { ascending: true });
-  
+
       if (censusError) throw censusError;
-  
-      const { labels: censusLabels, datasets: censusDatasets } = processCensusData(censusData);
-  
-      // Load rescues data
+
       const { data: rescuesData, error: rescuesError } = await client
         .from("rescues")
         .select("*")
         .gte("created_at", START_DATE)
         .order("created_at", { ascending: true });
-  
+
       if (rescuesError) throw rescuesError;
-  
+
+      const { labels: censusLabels, datasets: censusDatasets } = processCensusData(censusData);
       const { labels: rescuesLabels, datasets: rescuesDatasets } = processRescuesData(rescuesData);
-      
-      // Update header
+
       const lastDate = censusLabels[censusLabels.length - 1] || "No data";
-      const dateRange = `${censusLabels[0]} to ${lastDate}`;
+      const dateRange_ = `${censusLabels[0]} to ${lastDate}`;
       document.querySelector('.last-updated').innerHTML = `📊 Last update: ${lastDate}`;
 
-      // Replace loading content with charts
       const chartsContainer = document.getElementById('charts');
       chartsContainer.innerHTML = `
         <div class="chart-card">
           <h2>Dogs Registered in Canary Islands</h2>
-          <p>${dateRange}</p>
+          <p>${dateRange_}</p>
           <div class="chart-container">
             <canvas id="censusChart"></canvas>
           </div>
         </div>
-        
+
         <div class="chart-card">
           <h2>Rescued Dogs by Island</h2>
-          <p>${dateRange}</p>
+          <p>${dateRange_}</p>
           <div class="chart-container">
             <canvas id="rescuesChart"></canvas>
           </div>
         </div>
       `;
 
-      createChart("censusChart", "Census", censusLabels, censusDatasets);
-      createChart("rescuesChart", "Rescues", rescuesLabels, rescuesDatasets);
+      createChart("censusChart", censusLabels, censusDatasets);
+      createChart("rescuesChart", rescuesLabels, rescuesDatasets);
 
     } catch (error) {
       console.error('Error loading data:', error);
       const errorDiv = document.getElementById('error');
       errorDiv.style.display = 'block';
       errorDiv.textContent = `Error loading data: ${error.message}`;
-      
+
       const chartsContainer = document.getElementById('charts');
       chartsContainer.innerHTML = '<p style="color: white; text-align: center;">Unable to load charts. Please try refreshing the page.</p>';
     }
