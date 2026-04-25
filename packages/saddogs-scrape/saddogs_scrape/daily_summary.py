@@ -2,7 +2,7 @@
 
 import sys
 
-from saddogs_scrape.check_missing import get_missing_spider_names
+from check_missing import get_missing_spider_names
 from saddogs_scrape.spiders.services.send_failure_email import send_failure_email
 
 if __name__ == "__main__":
