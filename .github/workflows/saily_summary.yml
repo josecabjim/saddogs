@@ -1,0 +1,32 @@
+name: Daily Summary
+
+on:
+  schedule:
+    - cron: "0 22 * * *"  # 22:00 UTC daily
+  workflow_dispatch:
+
+env:
+  PYTHON_VERSION: "3.12"
+  POETRY_VERSION: "2.3.0"
+
+jobs:
+  daily_summary:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - uses: snok/install-poetry@v1
+        with:
+          version: ${{ env.POETRY_VERSION }}
+          virtualenvs-in-project: true
+      - run: cd packages/saddogs-scrape && poetry install
+      - name: Send summary email if any rescues still missing
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          cd packages/saddogs-scrape/saddogs_scrape
+          echo "Running end-of-day summary at $(date -u '+%Y-%m-%d %H:%M UTC')..."
+          poetry run python daily_summary.py

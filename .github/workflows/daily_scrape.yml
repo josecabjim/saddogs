@@ -3,7 +3,6 @@ name: Daily Scrape
 on:
   schedule:
     - cron: "0 */4 * * *"   # every 4 hours: 00:00, 04:00 ... 20:00 UTC
-    - cron: "0 22 * * *"    # daily summary at 22:00 UTC
   workflow_dispatch:
 
 env:
@@ -12,7 +11,6 @@ env:
 
 jobs:
   check_missing:
-    if: github.event.schedule != '0 22 * * *'
     runs-on: ubuntu-latest
     outputs:
       missing_spiders: ${{ steps.check.outputs.missing_spiders }}
@@ -34,11 +32,16 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: |
           cd packages/saddogs-scrape/saddogs_scrape
+          echo "Checking for missing rescues at $(date -u '+%Y-%m-%d %H:%M UTC')..."
           OUTPUT=$(poetry run python check_missing.py)
+
           if [ "$OUTPUT" = "__none__" ]; then
+            echo "✅ All rescues already have data for today — skipping scrape."
             echo "has_missing=false" >> $GITHUB_OUTPUT
           else
             SPIDERS=$(echo "$OUTPUT" | paste -sd ',' -)
+            COUNT=$(echo "$OUTPUT" | wc -l | tr -d ' ')
+            echo "⚠️ $COUNT rescue(s) missing data: $SPIDERS"
             echo "has_missing=true" >> $GITHUB_OUTPUT
             echo "missing_spiders=$SPIDERS" >> $GITHUB_OUTPUT
           fi
@@ -73,24 +76,3 @@ jobs:
             poetry run python run_all.py --spider "$SPIDER" || EXIT_CODE=$?
           done
           exit $EXIT_CODE
-
-  daily_summary:
-    if: github.event.schedule == '0 22 * * *'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-      - uses: snok/install-poetry@v1
-        with:
-          version: ${{ env.POETRY_VERSION }}
-          virtualenvs-in-project: true
-      - run: cd packages/saddogs-scrape && poetry install
-      - name: Send summary email if any rescues still missing
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-        run: |
-          cd packages/saddogs-scrape/saddogs_scrape
-          poetry run python daily_summary.py
