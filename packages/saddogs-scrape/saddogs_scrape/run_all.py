@@ -39,8 +39,11 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     try:
+        spider_names = (
+            [s.strip() for s in args.spiders.split(",")] if args.spiders else None
+        )
         monitor = run_all_spiders(
-            spider_filter=args.spider,
+            spider_names=spider_names,
             verbose=args.verbose,
             dry_run=args.dry_run,
         )

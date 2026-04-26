@@ -70,9 +70,4 @@ jobs:
           MISSING: ${{ needs.check_missing.outputs.missing_spiders }}
         run: |
           cd packages/saddogs-scrape/saddogs_scrape
-          EXIT_CODE=0
-          IFS=',' read -ra SPIDER_NAMES <<< "$MISSING"
-          for SPIDER in "${SPIDER_NAMES[@]}"; do
-            poetry run python run_all.py --spider "$SPIDER" || EXIT_CODE=$?
-          done
-          exit $EXIT_CODE
+          poetry run python run_all.py --spiders "$MISSING"

@@ -118,11 +118,11 @@ def load_spiders(spider_filter=None):
     return spiders
 
 
-def run_all_spiders(spider_filter=None, verbose=False, dry_run=False):
+def run_all_spiders(spider_names=None, verbose=False, dry_run=False):
     configure_logging({"LOG_LEVEL": "DEBUG" if verbose else "INFO"})
     logger = logging.getLogger(__name__)
 
-    spider_classes = load_spiders(spider_filter)
+    spider_classes = load_spiders(spider_names)
     logger.info(f"Spiders to run: {[s.__name__ for s in spider_classes]}")
 
     if not spider_classes:
