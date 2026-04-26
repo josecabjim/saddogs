@@ -100,8 +100,9 @@ class SpiderMonitor:
         }
 
 
-def load_spiders(spider_filter=None):
+def load_spiders(spider_names: list[str] | None = None):
     spiders = []
+    seen_names = set()
     for _, module_name, _ in pkgutil.iter_modules(spiders_pkg.__path__):
         module = importlib.import_module(f"saddogs_scrape.spiders.{module_name}")
         for attr_name in dir(module):
@@ -112,7 +113,10 @@ def load_spiders(spider_filter=None):
                 and attr is not Spider
                 and getattr(attr, "name", None)
             ):
-                if spider_filter and spider_filter.lower() not in attr.name.lower():
+                if attr.name in seen_names:
+                    continue
+                seen_names.add(attr.name)
+                if spider_names and attr.name not in spider_names:
                     continue
                 spiders.append(attr)
     return spiders

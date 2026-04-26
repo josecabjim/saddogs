@@ -41,4 +41,3 @@ if __name__ == "__main__":
         sys.exit(0)
     for name in missing:
         print(name)
-        print(name)

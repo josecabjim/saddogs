@@ -33,7 +33,7 @@ def write_report(monitor):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run Saddogs spiders.")
-    parser.add_argument("--spider", help="Filter spiders by name (substring match)")
+    parser.add_argument("--spiders", help="Filter spiders by name (substring match)")
     parser.add_argument("-v", "--verbose", action="store_true")
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
