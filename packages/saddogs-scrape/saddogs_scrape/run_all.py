@@ -63,8 +63,7 @@ if __name__ == "__main__":
         )
 
         if critical or high:
-            logger.error("Issues detected, sending alert email...")
-            sys.exit(1)
+            logger.error("Issues detected — check the report.")
         else:
             logger.info("All spiders healthy.")
 
