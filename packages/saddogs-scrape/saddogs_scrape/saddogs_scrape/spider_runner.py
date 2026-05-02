@@ -143,12 +143,17 @@ def run_all_spiders(spider_names=None, verbose=False, dry_run=False):
     for spider_class in spider_classes:
         crawler = process.create_crawler(spider_class)
         if proxy_url and getattr(spider_class, "use_proxy", False):
-            crawler.settings.set("HTTPPROXY_ENABLED", True, priority="spider")
-            crawler.settings.set("HTTP_PROXY", proxy_url, priority="spider")
+            crawler.settings.setdict(
+                {
+                    "HTTPPROXY_ENABLED": True,
+                    "HTTP_PROXY": proxy_url,
+                    "ROBOTSTXT_OBEY": False,
+                },
+                priority="cmdline",
+            )
             logger.info(f"{spider_class.name}: proxy enabled")
         crawler.signals.connect(monitor.spider_closed, signal=signals.spider_closed)
         process.crawl(crawler, dry_run=dry_run)
 
     process.start()
-    return monitor
     return monitor
