@@ -1,6 +1,4 @@
-import scrapy
 from saddogs_scrape.spiders.base.count_spider import CountSpider
-from saddogs_scrape.spiders.base.playwright_spider import PlaywrightCountSpider
 from saddogs_scrape.spiders.base.regex_spider import RegexSpider
 
 
@@ -49,32 +47,15 @@ class TenerifeRefugioInternacional(CountSpider):
     pagination_selector = "a.next.page-numbers::attr(href)"
 
 
-# class TenerifeAdejeMascotas(CountSpider):
-#     name = "tenerife_adeje_mascotas"
-
-#     rescue_name = "Adeje Mascotas"
-#     island = "Tenerife"
-
-#     start_urls = ["https://www.adeje.es/mascotas/mascotas-en-adopcion"]
-
-#     selector = "div.ListadoImgItem"
-#     start_urls = ["https://www.adeje.es/mascotas/mascotas-en-adopcion"]
-
-#     selector = "div.ListadoImgItem"
-
-
-class TenerifeAdejeMascotas(PlaywrightCountSpider):
+class TenerifeAdejeMascotas(CountSpider):
     name = "tenerife_adeje_mascotas"
+
     rescue_name = "Adeje Mascotas"
     island = "Tenerife"
-    selector = "div.ListadoImgItem"
 
-    def start_requests(self):
-        yield scrapy.Request(
-            url="https://www.adeje.es/mascotas/mascotas-en-adopcion",
-            meta={
-                "playwright": True,
-                "playwright_include_page": True,
-            },
-            callback=self.parse,
-        )
+    start_urls = ["https://www.adeje.es/mascotas/mascotas-en-adopcion"]
+
+    selector = "div.ListadoImgItem"
+    start_urls = ["https://www.adeje.es/mascotas/mascotas-en-adopcion"]
+
+    selector = "div.ListadoImgItem"
