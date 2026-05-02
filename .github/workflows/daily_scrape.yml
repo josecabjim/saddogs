@@ -68,7 +68,7 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           ADEJE_PROXY_URL: ${{ secrets.ADEJE_PROXY_URL }}
+          MISSING: ${{ needs.check_missing.outputs.missing_spiders }}
         run: |
           cd packages/saddogs-scrape/saddogs_scrape
           poetry run python run_all.py --spiders "$MISSING" || true
-          
