@@ -71,4 +71,5 @@ jobs:
           MISSING: ${{ needs.check_missing.outputs.missing_spiders }}
         run: |
           cd packages/saddogs-scrape/saddogs_scrape
+          echo "Proxy set: ${{ secrets.ADEJE_PROXY_URL != '' }}"
           poetry run python run_all.py --spiders "$MISSING" || true

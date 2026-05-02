@@ -1,3 +1,5 @@
+import os
+
 from saddogs_scrape.spiders.base.count_spider import CountSpider
 from saddogs_scrape.spiders.base.regex_spider import RegexSpider
 
@@ -56,6 +58,12 @@ class TenerifeAdejeMascotas(CountSpider):
     start_urls = ["https://www.adeje.es/mascotas/mascotas-en-adopcion"]
 
     selector = "div.ListadoImgItem"
-    start_urls = ["https://www.adeje.es/mascotas/mascotas-en-adopcion"]
 
-    selector = "div.ListadoImgItem"
+    custom_settings = {
+        "HTTPPROXY_ENABLED": True,
+        "HTTP_PROXY": os.environ.get("ADEJE_PROXY_URL"),
+    }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.logger.info(f"Proxy configured: {bool(os.environ.get('ADEJE_PROXY_URL'))}")
