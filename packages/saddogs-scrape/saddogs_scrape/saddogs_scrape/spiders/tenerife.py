@@ -51,18 +51,11 @@ class TenerifeRefugioInternacional(CountSpider):
 
 class TenerifeAdejeMascotas(CountSpider):
     name = "tenerife_adeje_mascotas"
-
     rescue_name = "Adeje Mascotas"
     island = "Tenerife"
-
     start_urls = ["https://www.adeje.es/mascotas/mascotas-en-adopcion"]
-
     selector = "div.ListadoImgItem"
-
-    custom_settings = {
-        "HTTPPROXY_ENABLED": True,
-        "HTTP_PROXY": os.environ.get("ADEJE_PROXY_URL"),
-    }
+    use_proxy = True
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
