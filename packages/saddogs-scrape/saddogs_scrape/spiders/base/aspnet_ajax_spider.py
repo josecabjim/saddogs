@@ -1,6 +1,6 @@
 import scrapy
-from saddogs_scrape.spiders.base.base_spider import BaseRescueSpider
 from scrapy import Selector
+from spiders.base.base_spider import BaseRescueSpider
 
 
 class AspNetAjaxCountSpider(BaseRescueSpider):

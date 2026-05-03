@@ -1,4 +1,4 @@
-from saddogs_scrape.spiders.base.count_spider import CountSpider
+from spiders.base.count_spider import CountSpider
 
 
 class LaPalmaBenawara(CountSpider):

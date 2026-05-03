@@ -1,5 +1,5 @@
-from saddogs_scrape.spiders.base.aspnet_ajax_spider import AspNetAjaxCountSpider
-from saddogs_scrape.spiders.base.count_spider import CountSpider
+from spiders.base.aspnet_ajax_spider import AspNetAjaxCountSpider
+from spiders.base.count_spider import CountSpider
 
 
 class GranCanariaBanaderos(AspNetAjaxCountSpider):

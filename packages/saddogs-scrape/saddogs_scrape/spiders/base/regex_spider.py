@@ -1,6 +1,6 @@
 import re
 
-from saddogs_scrape.spiders.base.base_spider import BaseRescueSpider
+from spiders.base.base_spider import BaseRescueSpider
 
 
 class RegexSpider(BaseRescueSpider):

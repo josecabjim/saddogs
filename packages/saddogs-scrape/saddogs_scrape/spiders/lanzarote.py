@@ -1,7 +1,7 @@
 import scrapy
-from saddogs_scrape.spiders.base.aspnet_ajax_spider import AspNetAjaxCountSpider
-from saddogs_scrape.spiders.base.playwright_spider import PlaywrightCountSpider
-from saddogs_scrape.spiders.base.regex_spider import RegexSpider
+from spiders.base.aspnet_ajax_spider import AspNetAjaxCountSpider
+from spiders.base.playwright_spider import PlaywrightCountSpider
+from spiders.base.regex_spider import RegexSpider
 
 
 class LanzaroteSaraSpider(RegexSpider):

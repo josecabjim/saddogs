@@ -2,10 +2,7 @@ import os
 
 import scrapy
 from saddogs_database.client import DatabaseClient
-from saddogs_scrape.spiders.services.validation import (
-    validate_against_previous,
-    validate_count,
-)
+from spiders.services.validation import validate_against_previous, validate_count
 
 
 class BaseSpider(scrapy.Spider):

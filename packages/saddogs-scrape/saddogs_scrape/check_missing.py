@@ -3,7 +3,7 @@
 import sys
 
 from saddogs_database.client import DatabaseClient
-from saddogs_scrape.spider_runner import load_spiders
+from spider_runner import load_spiders
 
 
 def get_missing_spider_names() -> list[str]:

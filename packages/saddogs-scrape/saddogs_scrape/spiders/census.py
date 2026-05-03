@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import Dict
 
-from saddogs_scrape.spiders.base.base_spider import BaseSpider
-from saddogs_scrape.spiders.services.validation import validate_count
+from spiders.base.base_spider import BaseSpider
+from spiders.services.validation import validate_count
 
 
 class CensusSpider(BaseSpider):
