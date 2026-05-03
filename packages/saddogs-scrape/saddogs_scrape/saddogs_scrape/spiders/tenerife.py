@@ -53,10 +53,20 @@ class TenerifeAdejeMascotas(CountSpider):
     name = "tenerife_adeje_mascotas"
     rescue_name = "Adeje Mascotas"
     island = "Tenerife"
-    start_urls = ["https://www.adeje.es/mascotas/mascotas-en-adopcion"]
     selector = "div.ListadoImgItem"
     use_proxy = True
+
+    start_urls = [
+        "https://ipv4.webshare.io/",  # temporary: tells us what IP Scrapy is using
+        "https://www.adeje.es/mascotas/mascotas-en-adopcion",
+    ]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.logger.info(f"Proxy configured: {bool(os.environ.get('ADEJE_PROXY_URL'))}")
+
+    def parse(self, response):
+        if "ipv4.webshare.io" in response.url:
+            self.logger.info(f"Scrapy is using IP: {response.text.strip()}")
+            return
+        yield from super().parse(response)
