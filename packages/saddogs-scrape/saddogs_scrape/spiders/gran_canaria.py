@@ -41,3 +41,28 @@ class GranCanariaAda(CountSpider):
 
     selector = "div.item:not(.item_placeholder)"
     pagination_selector = "a.next.page-numbers::attr(href)"
+
+
+class GranCanariaHappyDogMaspalomas(CountSpider):
+    name = "gran_canaria_happydogs_maspalomas"
+
+    rescue_name = "Happy Dog Maspalomas"
+    island = "Gran Canaria"
+
+    start_urls = ["https://happydogmaspalomas.com/onze-honden/"]
+
+    selector = 'div[data-elementor-type="loop-item"]'
+
+
+class GranCanariaAnahi(CountSpider):
+    name = "gran_canaria_anahi"
+
+    rescue_name = "Anahi"
+    island = "Gran Canaria"
+
+    start_urls = [
+        "https://anahidogrescue.org/category/perros/machos/",
+        "https://anahidogrescue.org/category/perros/hembras/",
+    ]
+
+    selector = "article[id^='post-']"

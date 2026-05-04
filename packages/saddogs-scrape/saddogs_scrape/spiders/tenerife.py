@@ -1,6 +1,6 @@
-import os
-
+import scrapy
 from spiders.base.count_spider import CountSpider
+from spiders.base.playwright_spider import PlaywrightCountSpider
 from spiders.base.regex_spider import RegexSpider
 
 
@@ -56,3 +56,62 @@ class TenerifeAdejeMascotas(CountSpider):
     start_urls = ["https://www.adeje.es/mascotas/mascotas-en-adopcion"]
     selector = "div.ListadoImgItem"
     use_proxy = True
+
+
+class TenerifeAdepac(PlaywrightCountSpider):
+    name = "tenerife_adepac"
+
+    rescue_name = "ADEPAC Canarias"
+    island = "Tenerife"
+
+    start_urls = ["https://www.adepaccanarias.com/adopta/"]
+
+    custom_settings = {
+        "ROBOTSTXT_OBEY": False,
+        "DOWNLOAD_HANDLERS": {
+            "http": "scrapy_playwright.handler.ScrapyPlaywrightDownloadHandler",
+            "https": "scrapy_playwright.handler.ScrapyPlaywrightDownloadHandler",
+        },
+        "TWISTED_REACTOR": "twisted.internet.asyncioreactor.AsyncioSelectorReactor",
+        "PLAYWRIGHT_BROWSER_TYPE": "chromium",
+        "PLAYWRIGHT_LAUNCH_OPTIONS": {
+            "headless": True,
+            "args": ["--no-sandbox", "--disable-setuid-sandbox"],
+        },
+    }
+
+    # ONLY real dogs (not adopted wrapper divs)
+    selector = "a.block"
+
+    # Next page button
+    next_button_selector = "button:has-text('Siguiente')"
+
+    def start_requests(self):
+        for url in self.start_urls:
+            yield scrapy.Request(
+                url,
+                meta={
+                    "playwright": True,
+                    "playwright_include_page": True,
+                    "playwright_page_goto_kwargs": {
+                        "wait_until": "networkidle",
+                        "timeout": 60000,
+                    },
+                },
+                callback=self.parse,
+            )
+
+
+class TenerifeK9(CountSpider):
+    name = "tenerife_k9"
+
+    rescue_name = "K9"
+    island = "Tenerife"
+
+    start_urls = [
+        "https://www.k9tenerife.eu/category/our-animals/k9-dogs/k9-dogs-waiting-for-homes/"
+    ]
+
+    selector = "article.latestPost.excerpt"
+
+    pagination_selector = "a.next.page-numbers::attr(href)"
