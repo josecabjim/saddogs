@@ -3,551 +3,595 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sad Dogs Dashboard</title>
-
+  <title>Sad Dogs — Canary Islands</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
+    :root {
+      --bg: #0d0d0d;
+      --surface: #141414;
+      --border: #1e1e1e;
+      --border-hi: #2e2e2e;
+      --text: #e8e8e4;
+      --muted: #4a4a44;
+      --muted-hi: #7a7a74;
+      --accent: #e8c547;
+      --green: #5bbd8a;
+      --red: #e06060;
     }
-
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { font-size: 15px; }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      font-family: 'Space Grotesk', sans-serif;
+      background: var(--bg);
+      color: var(--text);
       min-height: 100vh;
-      padding: 20px;
-      color: #333;
+      -webkit-font-smoothing: antialiased;
     }
+    .page { max-width: 1280px; margin: 0 auto; width: 100%; padding: 0 48px; }
 
-    .container {
-      max-width: 1400px;
-      margin: 0 auto;
+    /* TOPBAR */
+    .topbar { border-bottom: 1px solid var(--border); }
+    .topbar-inner { display: flex; align-items: center; justify-content: space-between; height: 56px; gap: 24px; }
+    .logo { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+    .logo-mark { font-family: 'Space Mono', monospace; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; color: var(--accent); text-transform: uppercase; }
+    .logo-sep { width: 1px; height: 14px; background: var(--border-hi); }
+    .logo-sub { font-size: 0.68rem; color: var(--muted-hi); }
+    nav { display: flex; height: 100%; }
+    nav a { display: flex; align-items: center; font-family: 'Space Mono', monospace; font-size: 0.62rem; letter-spacing: 0.1em; text-transform: uppercase; text-decoration: none; color: var(--muted-hi); padding: 0 18px; border-left: 1px solid var(--border); transition: color 0.15s, background 0.15s; }
+    nav a:hover { color: var(--text); background: var(--surface); }
+    nav a.active { color: var(--accent); }
+    .topbar-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+    .pulse { width: 5px; height: 5px; border-radius: 50%; background: var(--green); animation: blink 2.5s ease infinite; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.25} }
+    .updated-txt { font-family: 'Space Mono', monospace; font-size: 0.62rem; color: var(--muted-hi); }
+    .download-btn { font-family: 'Space Mono', monospace; font-size: 0.6rem; letter-spacing: 0.06em; background: none; border: 1px solid var(--border-hi); color: var(--muted-hi); padding: 5px 10px; cursor: pointer; transition: all 0.12s; text-transform: uppercase; }
+    .download-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* STATS */
+    .stats-bar { border-bottom: 1px solid var(--border); }
+    .stats-inner { display: grid; grid-template-columns: repeat(4, 1fr); }
+    .stat { padding: 24px 0 24px 28px; border-right: 1px solid var(--border); }
+    .stat:first-child { padding-left: 0; }
+    .stat:last-child { border-right: none; }
+    .stat-label { font-family: 'Space Mono', monospace; font-size: 0.58rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+    .stat-val { font-family: 'Space Mono', monospace; font-size: clamp(1.4rem, 2.8vw, 2rem); line-height: 1; color: var(--text); }
+    .stat-val.accent { color: var(--accent); }
+    .stat-val.up { color: var(--red); }
+    .stat-val.dn { color: var(--green); }
+    .stat-note { font-size: 0.62rem; color: var(--muted-hi); margin-top: 5px; }
+
+    /* GLOBAL CONTROLS */
+    .controls-bar { border-bottom: 1px solid var(--border); }
+    .controls-inner { display: flex; align-items: center; gap: 16px; padding: 14px 0; flex-wrap: wrap; }
+    .controls-label { font-family: 'Space Mono', monospace; font-size: 0.58rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); flex-shrink: 0; }
+    .range-btns { display: flex; gap: 2px; }
+    .range-btn { font-family: 'Space Mono', monospace; font-size: 0.6rem; letter-spacing: 0.08em; text-transform: uppercase; background: none; border: 1px solid var(--border-hi); color: var(--muted-hi); padding: 5px 12px; cursor: pointer; transition: all 0.12s; }
+    .range-btn:hover { border-color: var(--muted-hi); color: var(--text); }
+    .range-btn.active { background: var(--accent); border-color: var(--accent); color: var(--bg); }
+    .date-inputs { display: flex; align-items: center; gap: 4px; }
+    .date-input { font-family: 'Space Mono', monospace; font-size: 0.6rem; background: var(--surface); border: 1px solid var(--border-hi); color: var(--muted-hi); padding: 5px 8px; outline: none; width: 104px; transition: border-color 0.12s, color 0.12s; }
+    .date-input:focus { border-color: var(--accent); color: var(--text); }
+    .date-sep { font-family: 'Space Mono', monospace; font-size: 0.6rem; color: var(--muted); }
+    .apply-btn { font-family: 'Space Mono', monospace; font-size: 0.6rem; letter-spacing: 0.06em; background: none; border: 1px solid var(--border-hi); color: var(--muted-hi); padding: 5px 10px; cursor: pointer; transition: all 0.12s; }
+    .apply-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* SECTIONS */
+    .section { border-bottom: 1px solid var(--border); padding: 36px 0; }
+    .section-head { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 28px; gap: 24px; flex-wrap: wrap; }
+    .section-title { font-size: clamp(0.95rem, 2vw, 1.25rem); font-weight: 300; letter-spacing: -0.01em; color: var(--text); }
+    .section-title strong { font-weight: 500; color: var(--accent); }
+    .section-desc { font-size: 0.64rem; color: var(--muted-hi); margin-top: 4px; }
+
+    /* view toggle */
+    .view-toggle { display: flex; gap: 2px; }
+    .view-btn { font-family: 'Space Mono', monospace; font-size: 0.58rem; letter-spacing: 0.08em; text-transform: uppercase; background: none; border: 1px solid var(--border-hi); color: var(--muted-hi); padding: 4px 10px; cursor: pointer; transition: all 0.12s; }
+    .view-btn:hover { color: var(--text); border-color: var(--muted-hi); }
+    .view-btn.active { background: var(--surface); border-color: var(--muted-hi); color: var(--text); }
+
+    /* two-chart grid */
+    .chart-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; }
+    .chart-pane { background: var(--surface); padding: 20px; }
+    .chart-pane-label { font-family: 'Space Mono', monospace; font-size: 0.58rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted-hi); }
+    .chart-pane-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+    .chart-wrap { position: relative; height: 240px; }
+    .chart-wrap-sm { position: relative; height: 150px; }
+
+    /* ISLAND CARDS — single row, equal width */
+    .island-cards { display: flex; gap: 2px; }
+    .island-card { flex: 1 1 0; min-width: 0; background: var(--surface); padding: 16px; position: relative; overflow: hidden; }
+    .ic-name { font-family: 'Space Mono', monospace; font-size: 0.56rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted-hi); margin-bottom: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ic-val { font-family: 'Space Mono', monospace; font-size: clamp(0.85rem, 1.3vw, 1.15rem); color: var(--text); line-height: 1; }
+    .ic-change { font-family: 'Space Mono', monospace; font-size: 0.56rem; margin-top: 5px; white-space: nowrap; }
+    .ic-change.up { color: var(--red); }
+    .ic-change.dn { color: var(--green); }
+    .ic-change.flat { color: var(--muted-hi); }
+    .ic-bar { position: absolute; bottom: 0; left: 0; height: 2px; background: var(--accent); opacity: 0.35; }
+
+    /* LOADER */
+    .loader { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 200px; gap: 14px; }
+    .loader-bar { width: 60px; height: 1px; background: var(--border-hi); position: relative; overflow: hidden; }
+    .loader-bar::after { content: ''; position: absolute; inset: 0; background: var(--accent); transform: translateX(-100%); animation: scan 1.1s ease infinite; }
+    @keyframes scan { to { transform: translateX(200%); } }
+    .loader-txt { font-family: 'Space Mono', monospace; font-size: 0.58rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); }
+
+    /* FOOTER */
+    footer { border-top: 1px solid var(--border); padding: 18px 0 32px; }
+    .footer-inner { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+    footer span { font-family: 'Space Mono', monospace; font-size: 0.58rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+
+    /* FADE */
+    .fade { opacity: 0; animation: fadeIn 0.4s ease forwards; }
+    .d1 { animation-delay: 0.04s; } .d2 { animation-delay: 0.1s; } .d3 { animation-delay: 0.18s; }
+    @keyframes fadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+
+    /* RESPONSIVE */
+    @media (max-width: 960px) {
+      .page { padding: 0 24px; }
+      .chart-pair { grid-template-columns: 1fr; }
+      .stats-inner { grid-template-columns: 1fr 1fr; }
+      .stat { border-right: none; border-bottom: 1px solid var(--border); }
+      .stat:nth-child(2n) { border-left: 1px solid var(--border); }
+      .stat:nth-last-child(-n+2) { border-bottom: none; }
     }
-
-    header {
-      background: white;
-      border-radius: 12px;
-      padding: 28px;
-      margin-bottom: 28px;
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
-    }
-
-    header h1 {
-      font-size: 32px;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      margin-bottom: 12px;
-    }
-
-    .header-info {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 16px;
-      margin-top: 12px;
-    }
-
-    .last-updated {
-      font-size: 13px;
-      color: #666;
-      background: #f5f5f5;
-      padding: 8px 12px;
-      border-radius: 6px;
-    }
-
-    .loader {
-      display: inline-block;
-      width: 8px;
-      height: 8px;
-      background: #667eea;
-      border-radius: 50%;
-      animation: pulse 1.5s infinite;
-    }
-
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.5; }
-    }
-
-    nav {
-      display: flex;
-      gap: 12px;
-      margin-top: 14px;
-      flex-wrap: wrap;
-    }
-
-    nav a {
-      padding: 10px 18px;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-      text-decoration: none;
-      border-radius: 6px;
-      transition: all 0.3s ease;
-      font-weight: 500;
-      font-size: 14px;
-      border: 2px solid transparent;
-    }
-
-    nav a:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-    }
-
-    nav a.active {
-      background: white;
-      color: #667eea;
-      border-color: #667eea;
-    }
-
-    .content {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 28px;
-      margin-bottom: 28px;
-    }
-
-    .chart-card {
-      background: white;
-      border-radius: 12px;
-      padding: 24px;
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-      transition: transform 0.3s ease, box-shadow 0.3s ease;
-    }
-
-    .chart-card:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
-    }
-
-    .chart-card h2 {
-      font-size: 20px;
-      color: #667eea;
-      margin-bottom: 8px;
-      margin-top: 0;
-    }
-
-    .chart-card p {
-      font-size: 13px;
-      color: #999;
-      margin-bottom: 16px;
-    }
-
-    .chart-container {
-      position: relative;
-      height: 400px;
-      margin-bottom: 12px;
-    }
-
-    canvas {
-      width: 100% !important;
-      height: 100% !important;
-    }
-
-    footer {
-      background: rgba(255, 255, 255, 0.1);
-      backdrop-filter: blur(10px);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      border-radius: 12px;
-      padding: 20px;
-      text-align: center;
-      color: white;
-      font-size: 12px;
-    }
-
-    .error {
-      background: #fee;
-      border: 1px solid #fcc;
-      color: #c33;
-      padding: 16px;
-      border-radius: 8px;
-      margin-bottom: 20px;
-    }
-
-    .loading {
-      text-align: center;
-      padding: 40px;
-      color: white;
-    }
-
-    .loading-spinner {
-      display: inline-block;
-      width: 40px;
-      height: 40px;
-      border: 4px solid rgba(255, 255, 255, 0.3);
-      border-top: 4px solid white;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-      margin-bottom: 16px;
-    }
-
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-
-    @media (max-width: 1024px) {
-      .content {
-        grid-template-columns: 1fr;
-      }
-
-      header h1 {
-        font-size: 28px;
-      }
-
-      .header-info {
-        flex-direction: column;
-        align-items: flex-start;
-      }
-
-      nav {
-        width: 100%;
-      }
-
-      nav a {
-        flex: 1;
-        text-align: center;
-      }
-    }
-
     @media (max-width: 640px) {
-      body {
-        padding: 12px;
-      }
-
-      header {
-        padding: 20px;
-        margin-bottom: 20px;
-      }
-
-      header h1 {
-        font-size: 24px;
-      }
-
-      .content {
-        gap: 20px;
-        margin-bottom: 20px;
-      }
-
-      .chart-card {
-        padding: 16px;
-      }
-
-      .chart-container {
-        height: 280px;
-      }
-
-      nav a {
-        padding: 8px 12px;
-        font-size: 13px;
-      }
+      .topbar-right { display: none; }
+      .stats-inner { grid-template-columns: 1fr; }
+      .stat { border-left: none !important; border-bottom: 1px solid var(--border) !important; }
+      .stat:last-child { border-bottom: none !important; }
+      .island-cards { flex-wrap: wrap; }
+      .island-card { flex: 1 1 calc(50% - 1px); }
+      .chart-wrap { height: 200px; }
     }
-
   </style>
-
 </head>
-
 <body>
 
-<div class="container">
-  <header>
-    <h1>🐕 Sad Dogs Dashboard</h1>
-    <div class="header-info">
-      <div class="last-updated">
-        <span class="loader"></span> Loading data...
+<div class="topbar">
+  <div class="page">
+    <div class="topbar-inner">
+      <div class="logo">
+        <span class="logo-mark">Sad Dogs</span>
+        <div class="logo-sep"></div>
+        <span class="logo-sub">Canary Islands Rescue Monitor</span>
+      </div>
+      <nav></nav>
+      <div class="topbar-right">
+        <button class="download-btn" id="download-btn">↓ Download Data</button>
+        <div class="pulse"></div>
+        <span class="updated-txt" id="last-updated">—</span>
       </div>
     </div>
-    <nav>
-      <a href="index.html" class="active"><strong>Graphs</strong></a>
-      <a href="data.html">Data Tables</a>
-    </nav>
-  </header>
-
-  <div id="error" style="display: none;" class="error"></div>
-
-  <div class="content" id="charts">
-    <div class="loading">
-      <div class="loading-spinner"></div>
-      <p>Loading your data...</p>
-    </div>
   </div>
-
-  <footer>
-    <p>🔄 Data refreshes daily at 8:00 AM • Powered by Sad Dogs Analytics</p>
-  </footer>
 </div>
 
-<script>
+<div class="stats-bar fade d1">
+  <div class="page">
+    <div class="stats-inner">
+      <div class="stat">
+        <div class="stat-label">Total in Rescue</div>
+        <div class="stat-val accent" id="s-rescued">—</div>
+        <div class="stat-note">all islands combined</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Registered Dogs</div>
+        <div class="stat-val" id="s-registered">—</div>
+        <div class="stat-note">census total</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Net Change</div>
+        <div class="stat-val" id="s-delta">—</div>
+        <div class="stat-note" id="s-delta-note">rescue vs. period start</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Days Tracked</div>
+        <div class="stat-val" id="s-days">—</div>
+        <div class="stat-note">since monitoring began</div>
+      </div>
+    </div>
+  </div>
+</div>
 
+<div class="controls-bar fade d2">
+  <div class="page">
+    <div class="controls-inner">
+      <span class="controls-label">Period</span>
+      <div class="range-btns">
+        <button class="range-btn" data-months="1">1M</button>
+        <button class="range-btn" data-months="3">3M</button>
+        <button class="range-btn" data-months="6">6M</button>
+        <button class="range-btn active" data-months="all">All</button>
+      </div>
+      <div class="date-inputs">
+        <input type="date" class="date-input" id="date-from" min="2026-03-14">
+        <span class="date-sep">→</span>
+        <input type="date" class="date-input" id="date-to">
+        <button class="apply-btn" id="apply-custom">Apply</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="page fade d3">
+  <div class="section" id="rescue-section">
+    <div class="loader"><div class="loader-bar"></div><div class="loader-txt">Loading</div></div>
+  </div>
+  <div class="section" id="census-section">
+    <div class="loader"><div class="loader-bar"></div><div class="loader-txt">Loading</div></div>
+  </div>
+</div>
+
+<footer>
+  <div class="page">
+    <div class="footer-inner">
+      <span>Sad Dogs Analytics</span>
+      <span>Refreshes daily · Built to reduce suffering</span>
+    </div>
+  </div>
+</footer>
+
+<script>
   const SUPABASE_URL = "https://msxqdtjoaicxmzpmhndb.supabase.co";
   const SUPABASE_KEY = "sb_publishable_uDJ7_smtnDquaKX4VMh8EA_O18behoj";
-
   const { createClient } = supabase;
-  const client = createClient(SUPABASE_URL, SUPABASE_KEY);
+  const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+  const ABSOLUTE_START = "2026-03-14";
+  const PAL = ["#e8c547","#6ab0e8","#5bbd8a","#e06060","#c47be8","#e8916a","#6ae8d4","#e86ab0","#a0e86a"];
 
-  const colors = [
-    "#667eea", "#764ba2", "#f093fb",
-    "#4facfe", "#00f2fe", "#43e97b",
-    "#fa709a", "#fee140", "#30cfd0"
-  ];
+  Chart.defaults.font.family = "'Space Mono', monospace";
+  Chart.defaults.font.size = 10;
+  Chart.defaults.color = "#4a4a44";
 
-  // Returns an array of "YYYY-MM-DD" strings for every day from start to end inclusive.
-  function dateRange(start, end) {
-    const dates = [];
-    const cur = new Date(start + "T00:00:00Z");
-    const last = new Date(end + "T00:00:00Z");
-    while (cur <= last) {
-      dates.push(cur.toISOString().slice(0, 10));
-      cur.setUTCDate(cur.getUTCDate() + 1);
-    }
-    return dates;
+  let ALL_R = { labels: [], datasets: {} };
+  let ALL_C = { labels: [], datasets: {} };
+  let currentFrom = ABSOLUTE_START, currentTo = '';
+  let absChart = null, deltaChart = null, trendChart = null;
+  let absMode = 'total', deltaMode = 'total';
+
+  const fmtLabel = k => k === "Total" ? "Total" : k.split("_").map(w => w[0].toUpperCase() + w.slice(1)).join(" ");
+  const fmt = n => n?.toLocaleString('en-GB') ?? '—';
+  const fmtD = n => n == null ? '—' : (n >= 0 ? '+' : '') + n.toLocaleString('en-GB');
+  const clamp = d => d < ABSOLUTE_START ? ABSOLUTE_START : d;
+
+  function offsetDate(months) {
+    const d = new Date();
+    d.setUTCMonth(d.getUTCMonth() - months);
+    return clamp(d.toISOString().slice(0, 10));
   }
 
-  function processCensusData(rows) {
-    // Keep only the FIRST entry per calendar day.
-    const seen = new Set();
-    const firstPerDay = [];
-    for (const r of rows) {
-      const date = r.created_at.slice(0, 10);
-      if (!seen.has(date)) {
-        seen.add(date);
-        firstPerDay.push({ ...r, _date: date });
-      }
-    }
-
-    if (!firstPerDay.length) return { labels: [], datasets: {} };
-
-    const skip = ["id", "created_at"];
-    const columns = Object.keys(firstPerDay[0]).filter(c => !skip.includes(c) && c !== "_date");
-
-    // Build a map of date → row for forward-fill
-    const byDate = {};
-    for (const r of firstPerDay) byDate[r._date] = r;
-
-    const allDates = dateRange(firstPerDay[0]._date, firstPerDay[firstPerDay.length - 1]._date);
-
-    const datasets = {};
-    columns.forEach(col => datasets[col] = []);
-    datasets["Total"] = [];
-
-    let lastRow = null;
-    for (const date of allDates) {
-      if (byDate[date]) lastRow = byDate[date];
-      // If lastRow is still null (shouldn't happen since we start from first known date), skip
-      if (!lastRow) continue;
-
-      let total = 0;
-      columns.forEach(col => {
-        const v = lastRow[col] ?? 0;
-        datasets[col].push(v);
-        total += v;
-      });
-      datasets["Total"].push(total);
-    }
-
-    return { labels: allDates, datasets };
+  function makeDateRange(s, e) {
+    const out = [], cur = new Date(s + "T00:00:00Z"), end = new Date(e + "T00:00:00Z");
+    while (cur <= end) { out.push(cur.toISOString().slice(0,10)); cur.setUTCDate(cur.getUTCDate()+1); }
+    return out;
   }
 
-  function processRescuesData(rows) {
-    if (!rows.length) return { labels: [], datasets: {} };
-
-    // Step 1: for each (rescue_name, island, date) keep only the FIRST entry.
-    // rows are already ordered by created_at ascending.
-    const rescues = [...new Set(rows.map(r => `${r.rescue_name}__${r.island}`))];
-    const islands = [...new Set(rows.map(r => r.island))].sort();
-
-    const firstPerRescueDay = {};
-    for (const r of rows) {
-      const date = r.created_at.slice(0, 10);
-      const key = `${r.rescue_name}__${r.island}__${date}`;
-      if (!firstPerRescueDay[key]) {
-        firstPerRescueDay[key] = { date, island: r.island, rescue_name: r.rescue_name, total_dogs: r.total_dogs };
-      }
+  function processCensus(rows) {
+    const seen = new Set(), first = [];
+    for (const r of rows) { const d = r.created_at.slice(0,10); if (!seen.has(d)) { seen.add(d); first.push({...r,_d:d}); } }
+    if (!first.length) return { labels:[], datasets:{} };
+    const skip = ["id","created_at","_d"];
+    const cols = Object.keys(first[0]).filter(c => !skip.includes(c));
+    const byDate = {}; for (const r of first) byDate[r._d] = r;
+    const all = makeDateRange(first[0]._d, first.at(-1)._d);
+    const ds = {}; cols.forEach(c => ds[c]=[]); ds["Total"]=[];
+    let last = null;
+    for (const d of all) {
+      if (byDate[d]) last = byDate[d];
+      if (!last) continue;
+      let t = 0; cols.forEach(c => { const v = last[c]??0; ds[c].push(v); t+=v; }); ds["Total"].push(t);
     }
-    const deduped = Object.values(firstPerRescueDay);
-
-    // Step 2: index deduped entries by (rescue_key, date) for fast lookup.
-    const byRescueDate = {};
-    for (const r of deduped) {
-      const rescueKey = `${r.rescue_name}__${r.island}`;
-      if (!byRescueDate[rescueKey]) byRescueDate[rescueKey] = {};
-      byRescueDate[rescueKey][r.date] = r.total_dogs;
-    }
-
-    // Step 3: build full date range.
-    const allKnownDates = deduped.map(r => r.date).sort();
-    const allDates = dateRange(allKnownDates[0], allKnownDates[allKnownDates.length - 1]);
-
-    // Step 4: for each date, forward-fill each rescue individually, then aggregate into islands.
-    const lastKnownPerRescue = {};  // rescue_key → last known total_dogs
-
-    const datasets = {};
-    islands.forEach(i => datasets[i] = []);
-    datasets["Total"] = [];
-
-    for (const date of allDates) {
-      const islandTotals = {};
-
-      for (const rescueKey of rescues) {
-        const island = rescueKey.split("__")[1];
-        const dayValue = byRescueDate[rescueKey]?.[date];
-
-        if (dayValue !== undefined) {
-          lastKnownPerRescue[rescueKey] = dayValue;
-        }
-
-        const v = lastKnownPerRescue[rescueKey] ?? 0;
-        islandTotals[island] = (islandTotals[island] || 0) + v;
-      }
-
-      let total = 0;
-      islands.forEach(island => {
-        const v = islandTotals[island] || 0;
-        datasets[island].push(v);
-        total += v;
-      });
-      datasets["Total"].push(total);
-    }
-
-    return { labels: allDates, datasets };
+    return { labels: all, datasets: ds };
   }
 
-  function createChart(canvasId, labels, datasets) {
-    const chartDatasets =
-      Object.entries(datasets).map(([k, v], i) => ({
-        label: k,
-        data: v,
-        fill: false,
-        borderColor: colors[i % colors.length],
-        backgroundColor: colors[i % colors.length],
-        tension: 0.4,
-        borderWidth: k === "Total" ? 3 : 2,
-        pointRadius: k === "Total" ? 4 : 3,
-        pointBackgroundColor: colors[i % colors.length],
-        pointBorderColor: "#fff",
-        pointBorderWidth: 2,
-        pointHoverRadius: 6,
-      }));
-
-    const ctx = document.getElementById(canvasId);
-    if (!ctx) return;
-
-    new Chart(ctx, {
-      type: "line",
-      data: { labels, datasets: chartDatasets },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        interaction: { mode: 'index', intersect: false },
-        plugins: {
-          legend: {
-            position: 'top',
-            labels: {
-              font: { size: 12, weight: 600 },
-              padding: 16,
-              usePointStyle: true,
-              pointStyle: 'circle'
-            }
-          },
-          tooltip: {
-            mode: 'index',
-            intersect: false,
-            backgroundColor: 'rgba(0, 0, 0, 0.8)',
-            titleFont: { size: 14, weight: 'bold' },
-            bodyFont: { size: 12 },
-            padding: 12,
-            cornerRadius: 8,
-            displayColors: true
-          }
-        },
-        scales: {
-          y: {
-            beginAtZero: true,
-            grid: {
-              drawBorder: false,
-              color: 'rgba(0, 0, 0, 0.05)'
-            }
-          },
-          x: {
-            grid: {
-              drawBorder: false,
-              display: false
-            }
+  function processRescues(rows) {
+    if (!rows.length) return { labels:[], datasets:{} };
+    const rescues = [...new Set(rows.map(r=>`${r.rescue_name}__${r.island}`))];
+    const islands = [...new Set(rows.map(r=>r.island))].sort();
+    const fp = {};
+    for (const r of rows) { const d=r.created_at.slice(0,10), k=`${r.rescue_name}__${r.island}__${d}`; if (!fp[k]) fp[k]={date:d,island:r.island,rescue_name:r.rescue_name,total_dogs:r.total_dogs}; }
+    const deduped = Object.values(fp);
+    const brd = {};
+    const rescueFirstDate = {};
+    const rescueFirstValue = {};
+    for (const r of deduped) { 
+      const k=`${r.rescue_name}__${r.island}`; 
+      if (!brd[k]) brd[k]={};
+      brd[k][r.date]=r.total_dogs;
+      if (!rescueFirstDate[k] || r.date < rescueFirstDate[k]) {
+        rescueFirstDate[k] = r.date;
+        rescueFirstValue[k] = r.total_dogs;
+      }
+    }
+    const sorted = deduped.map(r=>r.date).sort();
+    const allD = makeDateRange(sorted[0], sorted.at(-1));
+    const lkr={}, ds={}; islands.forEach(i=>ds[i]=[]); ds["Total"]=[];
+    for (const d of allD) {
+      const it={};
+      for (const rk of rescues) {
+        const isl=rk.split("__")[1];
+        let v = brd[rk]?.[d];
+        if (v===undefined) {
+          if (d < rescueFirstDate[rk]) {
+            v = rescueFirstValue[rk];
+          } else {
+            v = lkr[rk] ?? 0;
           }
         }
+        if (v!==undefined) lkr[rk] = v;
+        it[isl]=(it[isl]||0)+(lkr[rk]??0);
       }
+      let t=0; islands.forEach(isl=>{const v=it[isl]||0;ds[isl].push(v);t+=v;}); ds["Total"].push(t);
+    }
+    return { labels: allD, datasets: ds };
+  }
+
+  function slice(labels, datasets, from, to) {
+    const s = clamp(from || ABSOLUTE_START);
+    const e = to || labels.at(-1) || s;
+    const i0 = labels.findIndex(d => d >= s);
+    const i1 = [...labels].reverse().findIndex(d => d <= e);
+    if (i0 === -1) return { labels, datasets };
+    const end = i1 === -1 ? labels.length-1 : labels.length-1-i1;
+    const newL = labels.slice(i0, end+1);
+    const newDS = {};
+    for (const [k,v] of Object.entries(datasets)) newDS[k] = v.slice(i0, end+1);
+    return { labels: newL, datasets: newDS };
+  }
+
+  function toDelta(ds) {
+    const out = {};
+    for (const [k,v] of Object.entries(ds)) { const b = v.find(x=>x!=null)??0; out[k]=v.map(x=>x-b); }
+    return out;
+  }
+
+  const TOOLTIP = { backgroundColor:'#1e1e1e', titleFont:{size:9,weight:'400'}, bodyFont:{size:9}, padding:10, cornerRadius:0, titleColor:'#7a7a74', bodyColor:'#e8e8e4', borderColor:'#2e2e2e', borderWidth:1 };
+  const LEGEND  = { position:'bottom', align:'start', labels:{font:{size:9},padding:14,usePointStyle:true,pointStyle:'line',color:'#4a4a44',boxWidth:18} };
+  const YS = { grid:{color:'#181818',lineWidth:1}, border:{display:false}, ticks:{font:{size:9},color:'#4a4a44',maxTicksLimit:5} };
+  const XS = { grid:{display:false}, border:{display:false}, ticks:{font:{size:9},color:'#4a4a44',maxTicksLimit:6,maxRotation:0} };
+
+  function mkAbsDS(ds, mode) {
+    const keys = mode==='total' ? ['Total'] : Object.keys(ds);
+    return keys.map((k,i)=>{
+      const tot=k==='Total', solo=mode==='total';
+      return { label:fmtLabel(k), data:ds[k], fill:solo, borderColor:solo?'#e8c547':tot?'#e8e8e4':PAL[i%PAL.length], backgroundColor:solo?'#e8c54718':'transparent', borderWidth:tot?2:1, pointRadius:0, pointHoverRadius:3, tension:0.3, order:tot?0:1 };
     });
+  }
+
+  function mkDeltaDS(ds, mode) {
+    const delta = toDelta(ds);
+    const keys = mode==='total' ? ['Total'] : Object.keys(delta);
+    return keys.map((k,i)=>{
+      const tot=k==='Total', solo=mode==='total';
+      return { label:fmtLabel(k), data:delta[k], fill:false, borderColor:solo?'#e8c547':tot?'#e8e8e4':PAL[i%PAL.length], backgroundColor:'transparent', borderWidth:tot?2:1, pointRadius:0, pointHoverRadius:3, tension:0.3, order:tot?0:1 };
+    });
+  }
+
+  function updateStats(rDS) {
+    const tot = rDS["Total"];
+    if (!tot?.length) return;
+    const delta = tot.at(-1) - tot[0];
+    const el = document.getElementById("s-delta");
+    el.textContent = fmtD(delta);
+    el.className = "stat-val " + (delta>0?'up':delta<0?'dn':'');
+    document.getElementById("s-delta-note").textContent = `rescue change since ${currentFrom}`;
+  }
+
+  function updateAll() {
+    const { labels:rL, datasets:rDS } = slice(ALL_R.labels, ALL_R.datasets, currentFrom, currentTo);
+    const { labels:cL, datasets:cDS } = slice(ALL_C.labels, ALL_C.datasets, currentFrom, currentTo);
+    updateStats(rDS);
+    if (absChart)   { absChart.data.labels = rL;   absChart.data.datasets   = mkAbsDS(rDS, absMode);   absChart.update(); }
+    if (deltaChart) { deltaChart.data.labels = rL; deltaChart.data.datasets = mkDeltaDS(rDS, deltaMode); deltaChart.update(); }
+    updateCensusCards(cL, cDS);
+    if (trendChart) { trendChart.data.labels = cL; trendChart.data.datasets[0].data = cDS["Total"]; trendChart.update(); }
+  }
+
+  function updateCensusCards(cL, cDS) {
+    const el = document.getElementById('census-cards');
+    if (!el) return;
+    const islands = Object.keys(cDS).filter(k=>k!=="Total").sort();
+    const maxVal = Math.max(...islands.map(isl=>cDS[isl].at(-1)??0));
+    el.innerHTML = islands.map(isl=>{
+      const vals=cDS[isl], latest=vals.at(-1)??0, first=vals.find(v=>v!=null)??0, delta=latest-first;
+      const pct=maxVal>0?(latest/maxVal)*100:0, cls=delta>0?'up':delta<0?'dn':'flat', arrow=delta>0?'↑':delta<0?'↓':'→';
+      return `<div class="island-card"><div class="ic-name">${fmtLabel(isl)}</div><div class="ic-val">${fmt(latest)}</div><div class="ic-change ${cls}">${arrow} ${fmtD(delta)}</div><div class="ic-bar" style="width:${pct.toFixed(1)}%"></div></div>`;
+    }).join('');
+  }
+
+  function renderRescue() {
+    const { labels:rL, datasets:rDS } = slice(ALL_R.labels, ALL_R.datasets, currentFrom, currentTo);
+    document.getElementById("rescue-section").innerHTML = `
+      <div class="section-head">
+        <div>
+          <div class="section-title">Dogs in <strong>Rescue</strong></div>
+          <div class="section-desc">Left: absolute count · Right: change from period start · toggle total / per island on each chart independently</div>
+        </div>
+      </div>
+      <div class="chart-pair">
+        <div class="chart-pane">
+          <div class="chart-pane-head">
+            <div class="chart-pane-label">Absolute count</div>
+            <div class="view-toggle" id="abs-toggle">
+              <button class="view-btn active" data-mode="total">Total</button>
+              <button class="view-btn" data-mode="islands">By island</button>
+            </div>
+          </div>
+          <div class="chart-wrap"><canvas id="cAbs"></canvas></div>
+        </div>
+        <div class="chart-pane">
+          <div class="chart-pane-head">
+            <div class="chart-pane-label">Change from period start</div>
+            <div class="view-toggle" id="delta-toggle">
+              <button class="view-btn active" data-mode="total">Total</button>
+              <button class="view-btn" data-mode="islands">By island</button>
+            </div>
+          </div>
+          <div class="chart-wrap"><canvas id="cDelta"></canvas></div>
+        </div>
+      </div>`;
+
+    absChart = new Chart(document.getElementById('cAbs'), {
+      type:'line', data:{labels:rL, datasets:mkAbsDS(rDS, absMode)},
+      options:{ responsive:true, maintainAspectRatio:false, interaction:{mode:'index',intersect:false},
+        plugins:{ legend:LEGEND, tooltip:{...TOOLTIP, callbacks:{label:c=>` ${c.dataset.label}: ${fmt(c.parsed.y)}`}} },
+        scales:{ y:{...YS, beginAtZero:false, ticks:{...YS.ticks, callback:v=>fmt(v)}}, x:XS } }
+    });
+
+    deltaChart = new Chart(document.getElementById('cDelta'), {
+      type:'line', data:{labels:rL, datasets:mkDeltaDS(rDS, deltaMode)},
+      options:{ responsive:true, maintainAspectRatio:false, interaction:{mode:'index',intersect:false},
+        plugins:{ legend:LEGEND, tooltip:{...TOOLTIP, callbacks:{label:c=>` ${c.dataset.label}: ${c.parsed.y>=0?'+':''}${fmt(c.parsed.y)}`}} },
+        scales:{ y:{...YS, beginAtZero:false, ticks:{...YS.ticks, callback:v=>(v>=0?'+':'')+fmt(v)}}, x:XS } }
+    });
+
+    document.getElementById('abs-toggle').addEventListener('click', e=>{
+      const btn=e.target.closest('.view-btn'); if (!btn) return;
+      absMode=btn.dataset.mode;
+      document.querySelectorAll('#abs-toggle .view-btn').forEach(b=>b.classList.toggle('active',b===btn));
+      const {labels:l2,datasets:d2}=slice(ALL_R.labels,ALL_R.datasets,currentFrom,currentTo);
+      absChart.data.labels=l2; absChart.data.datasets=mkAbsDS(d2,absMode); absChart.update();
+    });
+
+    document.getElementById('delta-toggle').addEventListener('click', e=>{
+      const btn=e.target.closest('.view-btn'); if (!btn) return;
+      deltaMode=btn.dataset.mode;
+      document.querySelectorAll('#delta-toggle .view-btn').forEach(b=>b.classList.toggle('active',b===btn));
+      const {labels:l2,datasets:d2}=slice(ALL_R.labels,ALL_R.datasets,currentFrom,currentTo);
+      deltaChart.data.labels=l2; deltaChart.data.datasets=mkDeltaDS(d2,deltaMode); deltaChart.update();
+    });
+  }
+
+  function renderCensus() {
+    const { labels:cL, datasets:cDS } = slice(ALL_C.labels, ALL_C.datasets, currentFrom, currentTo);
+    const islands = Object.keys(cDS).filter(k=>k!=="Total").sort();
+    const maxVal = Math.max(...islands.map(isl=>cDS[isl].at(-1)??0));
+    const cards = islands.map(isl=>{
+      const vals=cDS[isl], latest=vals.at(-1)??0, first=vals.find(v=>v!=null)??0, delta=latest-first;
+      const pct=maxVal>0?(latest/maxVal)*100:0, cls=delta>0?'up':delta<0?'dn':'flat', arrow=delta>0?'↑':delta<0?'↓':'→';
+      return `<div class="island-card"><div class="ic-name">${fmtLabel(isl)}</div><div class="ic-val">${fmt(latest)}</div><div class="ic-change ${cls}">${arrow} ${fmtD(delta)}</div><div class="ic-bar" style="width:${pct.toFixed(1)}%"></div></div>`;
+    }).join('');
+
+    document.getElementById("census-section").innerHTML = `
+      <div class="section-head">
+        <div>
+          <div class="section-title"><strong>Registered</strong> Dogs by Island</div>
+          <div class="section-desc">Latest snapshot · bar shows share relative to highest island · change within selected period</div>
+        </div>
+      </div>
+      <div class="island-cards" id="census-cards">${cards}</div>
+      <div style="margin-top:20px">
+        <div class="chart-pane-label" style="margin-bottom:12px">Total registered — trend</div>
+        <div class="chart-wrap-sm"><canvas id="cTrend"></canvas></div>
+      </div>`;
+
+    trendChart = new Chart(document.getElementById('cTrend'), {
+      type:'line', data:{ labels:cL, datasets:[{ label:'Total registered', data:cDS["Total"], fill:true, borderColor:'#e8c547', backgroundColor:'#e8c54710', borderWidth:1.5, pointRadius:0, pointHoverRadius:3, tension:0.3 }] },
+      options:{ responsive:true, maintainAspectRatio:false, interaction:{mode:'index',intersect:false},
+        plugins:{ legend:{display:false}, tooltip:{...TOOLTIP, callbacks:{label:c=>` Total: ${fmt(c.parsed.y)}`}} },
+        scales:{ y:{...YS, beginAtZero:false, ticks:{...YS.ticks, callback:v=>fmt(v)}}, x:XS } }
+    });
+  }
+
+  function applyRange(from, to, activeBtn) {
+    currentFrom = clamp(from || ABSOLUTE_START);
+    currentTo   = to || '';
+    document.querySelectorAll('.range-btn').forEach(b=>b.classList.remove('active'));
+    if (activeBtn) activeBtn.classList.add('active');
+    document.getElementById('date-from').value = currentFrom;
+    if (currentTo) document.getElementById('date-to').value = currentTo;
+    updateAll();
+  }
+
+  function downloadData() {
+    if (!ALL_C.labels || !ALL_C.labels.length || !ALL_R.labels || !ALL_R.labels.length) {
+      alert('No data available to download');
+      return;
+    }
+    const islands = Object.keys(ALL_C.datasets).filter(k => k !== 'Total').sort();
+    const cIslands = Object.keys(ALL_C.datasets).filter(k => k !== 'Total').sort();
+    const rIslands = Object.keys(ALL_R.datasets).filter(k => k !== 'Total').sort();
+    
+    // Use rescue data labels as primary (more complete)
+    const labels = ALL_R.labels;
+    const censusMap = {}; for (let i = 0; i < ALL_C.labels.length; i++) { censusMap[ALL_C.labels[i]] = i; }
+    
+    const rows = [];
+    const header = ['Date'];
+    cIslands.forEach(isl => header.push(`${isl} (Registered)`));
+    rIslands.forEach(isl => header.push(`${isl} (Rescue)`));
+    rows.push(header.join(','));
+    
+    for (let i = 0; i < labels.length; i++) {
+      const date = labels[i];
+      const row = [date];
+      const cIdx = censusMap[date];
+      cIslands.forEach(isl => row.push(cIdx !== undefined ? (ALL_C.datasets[isl][cIdx] || 0) : 0));
+      rIslands.forEach(isl => row.push(ALL_R.datasets[isl][i] || 0));
+      rows.push(row.join(','));
+    }
+    
+    const csv = rows.join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `sad-dogs-data-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
   }
 
   async function load() {
     try {
-      const START_DATE = "2026-03-14";
+      const [{data:cD,error:cE},{data:rD,error:rE}] = await Promise.all([
+        db.from("census").select("*").gte("created_at",ABSOLUTE_START).order("created_at",{ascending:true}),
+        db.from("rescues").select("*").gte("created_at",ABSOLUTE_START).order("created_at",{ascending:true}),
+      ]);
+      if (cE) throw cE; if (rE) throw rE;
 
-      const { data: censusData, error: censusError } = await client
-        .from("census")
-        .select("*")
-        .gte("created_at", START_DATE)
-        .order("created_at", { ascending: true });
+      ALL_C = processCensus(cD);
+      ALL_R = processRescues(rD);
 
-      if (censusError) throw censusError;
+      currentTo = ALL_R.labels.at(-1) ?? '';
+      document.getElementById('date-from').value = ABSOLUTE_START;
+      document.getElementById('date-to').value = currentTo;
 
-      const { data: rescuesData, error: rescuesError } = await client
-        .from("rescues")
-        .select("*")
-        .gte("created_at", START_DATE)
-        .order("created_at", { ascending: true });
+      document.getElementById("s-rescued").textContent   = fmt(ALL_R.datasets["Total"]?.at(-1) ?? 0);
+      document.getElementById("s-registered").textContent = fmt(ALL_C.datasets["Total"]?.at(-1) ?? 0);
+      document.getElementById("s-days").textContent       = ALL_C.labels.length;
+      document.getElementById("last-updated").textContent = ALL_C.labels.at(-1) ?? ALL_R.labels.at(-1) ?? '—';
+      updateStats(ALL_R.datasets);
 
-      if (rescuesError) throw rescuesError;
+      renderRescue();
+      renderCensus();
 
-      const { labels: censusLabels, datasets: censusDatasets } = processCensusData(censusData);
-      const { labels: rescuesLabels, datasets: rescuesDatasets } = processRescuesData(rescuesData);
-
-      const lastDate = censusLabels[censusLabels.length - 1] || "No data";
-      const dateRange_ = `${censusLabels[0]} to ${lastDate}`;
-      document.querySelector('.last-updated').innerHTML = `📊 Last update: ${lastDate}`;
-
-      const chartsContainer = document.getElementById('charts');
-      chartsContainer.innerHTML = `
-        <div class="chart-card">
-          <h2>Dogs Registered in Canary Islands</h2>
-          <p>${dateRange_}</p>
-          <div class="chart-container">
-            <canvas id="censusChart"></canvas>
-          </div>
-        </div>
-
-        <div class="chart-card">
-          <h2>Rescued Dogs by Island</h2>
-          <p>${dateRange_}</p>
-          <div class="chart-container">
-            <canvas id="rescuesChart"></canvas>
-          </div>
-        </div>
-      `;
-
-      createChart("censusChart", censusLabels, censusDatasets);
-      createChart("rescuesChart", rescuesLabels, rescuesDatasets);
-
-    } catch (error) {
-      console.error('Error loading data:', error);
-      const errorDiv = document.getElementById('error');
-      errorDiv.style.display = 'block';
-      errorDiv.textContent = `Error loading data: ${error.message}`;
-
-      const chartsContainer = document.getElementById('charts');
-      chartsContainer.innerHTML = '<p style="color: white; text-align: center;">Unable to load charts. Please try refreshing the page.</p>';
+    } catch(err) {
+      console.error(err);
+      ['rescue-section','census-section'].forEach(id=>{
+        document.getElementById(id).innerHTML=`<div style="padding:40px 0;font-family:'Space Mono',monospace;font-size:0.65rem;color:var(--muted-hi)">Error — ${err.message}</div>`;
+      });
     }
   }
 
+  document.querySelectorAll('.range-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const m=btn.dataset.months;
+      if (m==='all') applyRange(ABSOLUTE_START,'',btn);
+      else applyRange(offsetDate(parseInt(m)),'',btn);
+    });
+  });
+
+  document.getElementById('apply-custom').addEventListener('click', ()=>{
+    const from=document.getElementById('date-from').value;
+    const to=document.getElementById('date-to').value;
+    if (from) { document.querySelectorAll('.range-btn').forEach(b=>b.classList.remove('active')); applyRange(from,to,null); }
+  });
+
+  document.getElementById('download-btn').addEventListener('click', downloadData);
+
   load();
-
 </script>
-
 </body>
 </html>
