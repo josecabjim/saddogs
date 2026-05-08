@@ -1,9 +1,26 @@
 """Print spider names for rescues missing today. One name per line."""
 
 import sys
+from datetime import date
 
 from saddogs_database.client import DatabaseClient
 from spider_runner import load_spiders
+
+
+def census_missing(db: DatabaseClient) -> bool:
+    latest = db.census.get_latest()
+    if not latest:
+        return True
+
+    created_at = latest.get("created_at")
+    if isinstance(created_at, str):
+        entry_date = created_at[:10]
+    elif hasattr(created_at, "date"):
+        entry_date = created_at.date().isoformat()
+    else:
+        entry_date = ""
+
+    return entry_date != date.today().isoformat()
 
 
 def get_missing_spider_names() -> list[str]:
@@ -27,11 +44,16 @@ def get_missing_spider_names() -> list[str]:
     )
     missing_set = set(missing_pairs)
 
-    return [
+    missing = [
         spider_name
         for spider_name, pair in known_pairs_by_spider.items()
         if pair in missing_set
     ]
+
+    if census_missing(db):
+        missing.append("census")
+
+    return missing
 
 
 if __name__ == "__main__":
