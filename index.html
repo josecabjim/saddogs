@@ -139,9 +139,10 @@
     }
     @media (max-width: 640px) {
       .topbar-right { display: none; }
-      .stats-inner { grid-template-columns: 1fr; }
-      .stat { border-left: none !important; border-bottom: 1px solid var(--border) !important; }
-      .stat:last-child { border-bottom: none !important; }
+      .stats-inner { grid-template-columns: 1fr 1fr; }
+      .stat { border-right: none; border-bottom: 1px solid var(--border); padding-left: 14px; padding-right: 14px; }
+      .stat:nth-child(2n) { border-left: 1px solid var(--border); }
+      .stat:nth-child(n+3) { border-bottom: none; }
       .island-cards { flex-wrap: wrap; }
       .island-card { flex: 1 1 calc(50% - 1px); }
       .chart-wrap { height: 200px; }
@@ -356,7 +357,19 @@
     const keys = mode==='total' ? ['Total'] : Object.keys(ds);
     return keys.map((k,i)=>{
       const tot=k==='Total', solo=mode==='total';
-      return { label:fmtLabel(k), data:ds[k], fill:solo, borderColor:solo?'#e8c547':tot?'#e8e8e4':PAL[i%PAL.length], backgroundColor:solo?'#e8c54718':'transparent', borderWidth:tot?2:1, pointRadius:0, pointHoverRadius:3, tension:0.3, order:tot?0:1 };
+      return { 
+        label:fmtLabel(k), 
+        data:ds[k], 
+        fill:solo, 
+        borderColor:solo?'#e8c547':tot?'#e8e8e4':PAL[i%PAL.length], 
+        backgroundColor:solo?'#e8c54718':'transparent', 
+        borderWidth:tot?2:1, 
+        pointRadius:0, 
+        pointHoverRadius:3, 
+        tension:0.3, 
+        order:tot?0:1,
+        hidden: mode==='islands' && tot ? true : false
+      };
     });
   }
 
@@ -365,7 +378,19 @@
     const keys = mode==='total' ? ['Total'] : Object.keys(delta);
     return keys.map((k,i)=>{
       const tot=k==='Total', solo=mode==='total';
-      return { label:fmtLabel(k), data:delta[k], fill:false, borderColor:solo?'#e8c547':tot?'#e8e8e4':PAL[i%PAL.length], backgroundColor:'transparent', borderWidth:tot?2:1, pointRadius:0, pointHoverRadius:3, tension:0.3, order:tot?0:1 };
+      return { 
+        label:fmtLabel(k), 
+        data:delta[k], 
+        fill:false, 
+        borderColor:solo?'#e8c547':tot?'#e8e8e4':PAL[i%PAL.length], 
+        backgroundColor:'transparent', 
+        borderWidth:tot?2:1, 
+        pointRadius:0, 
+        pointHoverRadius:3, 
+        tension:0.3, 
+        order:tot?0:1,
+        hidden: mode==='islands' && tot ? true : false
+      };
     });
   }
 
