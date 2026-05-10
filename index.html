@@ -7,10 +7,146 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="projects/saddogs-dashboard/css/styles.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script type="module" src="projects/saddogs-dashboard/js/main.js"></script>
+  <style>
+    :root {
+      --bg: #0d0d0d;
+      --surface: #141414;
+      --border: #1e1e1e;
+      --border-hi: #2e2e2e;
+      --text: #e8e8e4;
+      --muted: #4a4a44;
+      --muted-hi: #7a7a74;
+      --accent: #e8c547;
+      --green: #5bbd8a;
+      --red: #e06060;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { font-size: 15px; }
+    body {
+      font-family: 'Space Grotesk', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+    .page { max-width: 1280px; margin: 0 auto; width: 100%; padding: 0 48px; }
+
+    /* TOPBAR */
+    .topbar { border-bottom: 1px solid var(--border); }
+    .topbar-inner { display: flex; align-items: center; justify-content: space-between; height: 56px; gap: 24px; }
+    .logo { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+    .logo-mark { font-family: 'Space Mono', monospace; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; color: var(--accent); text-transform: uppercase; }
+    .logo-sep { width: 1px; height: 14px; background: var(--border-hi); }
+    .logo-sub { font-size: 0.68rem; color: var(--muted-hi); }
+    nav { display: flex; height: 100%; }
+    nav a { display: flex; align-items: center; font-family: 'Space Mono', monospace; font-size: 0.62rem; letter-spacing: 0.1em; text-transform: uppercase; text-decoration: none; color: var(--muted-hi); padding: 0 18px; border-left: 1px solid var(--border); transition: color 0.15s, background 0.15s; }
+    nav a:hover { color: var(--text); background: var(--surface); }
+    nav a.active { color: var(--accent); }
+    .topbar-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+    .pulse { width: 5px; height: 5px; border-radius: 50%; background: var(--green); animation: blink 2.5s ease infinite; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.25} }
+    .updated-txt { font-family: 'Space Mono', monospace; font-size: 0.62rem; color: var(--muted-hi); }
+    .download-btn { font-family: 'Space Mono', monospace; font-size: 0.6rem; letter-spacing: 0.06em; background: none; border: 1px solid var(--border-hi); color: var(--muted-hi); padding: 5px 10px; cursor: pointer; transition: all 0.12s; text-transform: uppercase; }
+    .download-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* STATS */
+    .stats-bar { border-bottom: 1px solid var(--border); }
+    .stats-inner { display: grid; grid-template-columns: repeat(4, 1fr); }
+    .stat { padding: 24px 0 24px 28px; border-right: 1px solid var(--border); }
+    .stat:first-child { padding-left: 0; }
+    .stat:last-child { border-right: none; }
+    .stat-label { font-family: 'Space Mono', monospace; font-size: 0.58rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+    .stat-val { font-family: 'Space Mono', monospace; font-size: clamp(1.4rem, 2.8vw, 2rem); line-height: 1; color: var(--text); }
+    .stat-val.accent { color: var(--accent); }
+    .stat-val.up { color: var(--red); }
+    .stat-val.dn { color: var(--green); }
+    .stat-note { font-size: 0.62rem; color: var(--muted-hi); margin-top: 5px; }
+
+    /* GLOBAL CONTROLS */
+    .controls-bar { border-bottom: 1px solid var(--border); }
+    .controls-inner { display: flex; align-items: center; gap: 16px; padding: 14px 0; flex-wrap: wrap; }
+    .controls-label { font-family: 'Space Mono', monospace; font-size: 0.58rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); flex-shrink: 0; }
+    .range-btns { display: flex; gap: 2px; }
+    .range-btn { font-family: 'Space Mono', monospace; font-size: 0.6rem; letter-spacing: 0.08em; text-transform: uppercase; background: none; border: 1px solid var(--border-hi); color: var(--muted-hi); padding: 5px 12px; cursor: pointer; transition: all 0.12s; }
+    .range-btn:hover { border-color: var(--muted-hi); color: var(--text); }
+    .range-btn.active { background: var(--accent); border-color: var(--accent); color: var(--bg); }
+    .date-inputs { display: flex; align-items: center; gap: 4px; }
+    .date-input { font-family: 'Space Mono', monospace; font-size: 0.6rem; background: var(--surface); border: 1px solid var(--border-hi); color: var(--muted-hi); padding: 5px 8px; outline: none; width: 104px; transition: border-color 0.12s, color 0.12s; }
+    .date-input:focus { border-color: var(--accent); color: var(--text); }
+    .date-sep { font-family: 'Space Mono', monospace; font-size: 0.6rem; color: var(--muted); }
+    .apply-btn { font-family: 'Space Mono', monospace; font-size: 0.6rem; letter-spacing: 0.06em; background: none; border: 1px solid var(--border-hi); color: var(--muted-hi); padding: 5px 10px; cursor: pointer; transition: all 0.12s; }
+    .apply-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* SECTIONS */
+    .section { border-bottom: 1px solid var(--border); padding: 36px 0; }
+    .section-head { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 28px; gap: 24px; flex-wrap: wrap; }
+    .section-title { font-size: clamp(0.95rem, 2vw, 1.25rem); font-weight: 300; letter-spacing: -0.01em; color: var(--text); }
+    .section-title strong { font-weight: 500; color: var(--accent); }
+    .section-desc { font-size: 0.64rem; color: var(--muted-hi); margin-top: 4px; }
+
+    /* view toggle */
+    .view-toggle { display: flex; gap: 2px; }
+    .view-btn { font-family: 'Space Mono', monospace; font-size: 0.58rem; letter-spacing: 0.08em; text-transform: uppercase; background: none; border: 1px solid var(--border-hi); color: var(--muted-hi); padding: 4px 10px; cursor: pointer; transition: all 0.12s; }
+    .view-btn:hover { color: var(--text); border-color: var(--muted-hi); }
+    .view-btn.active { background: var(--surface); border-color: var(--muted-hi); color: var(--text); }
+
+    /* two-chart grid */
+    .chart-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; }
+    .chart-pane { background: var(--surface); padding: 20px; }
+    .chart-pane-label { font-family: 'Space Mono', monospace; font-size: 0.58rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted-hi); }
+    .chart-pane-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+    .chart-wrap { position: relative; height: 240px; }
+    .chart-wrap-sm { position: relative; height: 150px; }
+
+    /* ISLAND CARDS — single row, equal width */
+    .island-cards { display: flex; gap: 2px; }
+    .island-card { flex: 1 1 0; min-width: 0; background: var(--surface); padding: 16px; position: relative; overflow: hidden; }
+    .ic-name { font-family: 'Space Mono', monospace; font-size: 0.56rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted-hi); margin-bottom: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ic-val { font-family: 'Space Mono', monospace; font-size: clamp(0.85rem, 1.3vw, 1.15rem); color: var(--text); line-height: 1; }
+    .ic-change { font-family: 'Space Mono', monospace; font-size: 0.56rem; margin-top: 5px; white-space: nowrap; }
+    .ic-change.up { color: var(--red); }
+    .ic-change.dn { color: var(--green); }
+    .ic-change.flat { color: var(--muted-hi); }
+    .ic-bar { position: absolute; bottom: 0; left: 0; height: 2px; background: var(--accent); opacity: 0.35; }
+
+    /* LOADER */
+    .loader { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 200px; gap: 14px; }
+    .loader-bar { width: 60px; height: 1px; background: var(--border-hi); position: relative; overflow: hidden; }
+    .loader-bar::after { content: ''; position: absolute; inset: 0; background: var(--accent); transform: translateX(-100%); animation: scan 1.1s ease infinite; }
+    @keyframes scan { to { transform: translateX(200%); } }
+    .loader-txt { font-family: 'Space Mono', monospace; font-size: 0.58rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); }
+
+    /* FOOTER */
+    footer { border-top: 1px solid var(--border); padding: 18px 0 32px; }
+    .footer-inner { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+    footer span { font-family: 'Space Mono', monospace; font-size: 0.58rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+
+    /* FADE */
+    .fade { opacity: 0; animation: fadeIn 0.4s ease forwards; }
+    .d1 { animation-delay: 0.04s; } .d2 { animation-delay: 0.1s; } .d3 { animation-delay: 0.18s; }
+    @keyframes fadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+
+    /* RESPONSIVE */
+    @media (max-width: 960px) {
+      .page { padding: 0 24px; }
+      .chart-pair { grid-template-columns: 1fr; }
+      .stats-inner { grid-template-columns: 1fr 1fr; }
+      .stat { border-right: none; border-bottom: 1px solid var(--border); }
+      .stat:nth-child(2n) { border-left: 1px solid var(--border); }
+      .stat:nth-last-child(-n+2) { border-bottom: none; }
+    }
+    @media (max-width: 640px) {
+      .topbar-right { display: none; }
+      .stats-inner { grid-template-columns: 1fr; }
+      .stat { border-left: none !important; border-bottom: 1px solid var(--border) !important; }
+      .stat:last-child { border-bottom: none !important; }
+      .island-cards { flex-wrap: wrap; }
+      .island-card { flex: 1 1 calc(50% - 1px); }
+      .chart-wrap { height: 200px; }
+    }
+  </style>
 </head>
 <body>
 
@@ -97,5 +233,365 @@
   </div>
 </footer>
 
+<script>
+  const SUPABASE_URL = "https://msxqdtjoaicxmzpmhndb.supabase.co";
+  const SUPABASE_KEY = "sb_publishable_uDJ7_smtnDquaKX4VMh8EA_O18behoj";
+  const { createClient } = supabase;
+  const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+  const ABSOLUTE_START = "2026-03-14";
+  const PAL = ["#e8c547","#6ab0e8","#5bbd8a","#e06060","#c47be8","#e8916a","#6ae8d4","#e86ab0","#a0e86a"];
+
+  Chart.defaults.font.family = "'Space Mono', monospace";
+  Chart.defaults.font.size = 10;
+  Chart.defaults.color = "#4a4a44";
+
+  let ALL_R = { labels: [], datasets: {} };
+  let ALL_C = { labels: [], datasets: {} };
+  let currentFrom = ABSOLUTE_START, currentTo = '';
+  let absChart = null, deltaChart = null, trendChart = null;
+  let absMode = 'total', deltaMode = 'total';
+
+  const fmtLabel = k => k === "Total" ? "Total" : k.split("_").map(w => w[0].toUpperCase() + w.slice(1)).join(" ");
+  const fmt = n => n?.toLocaleString('en-GB') ?? '—';
+  const fmtD = n => n == null ? '—' : (n >= 0 ? '+' : '') + n.toLocaleString('en-GB');
+  const clamp = d => d < ABSOLUTE_START ? ABSOLUTE_START : d;
+
+  function offsetDate(months) {
+    const d = new Date();
+    d.setUTCMonth(d.getUTCMonth() - months);
+    return clamp(d.toISOString().slice(0, 10));
+  }
+
+  function makeDateRange(s, e) {
+    const out = [], cur = new Date(s + "T00:00:00Z"), end = new Date(e + "T00:00:00Z");
+    while (cur <= end) { out.push(cur.toISOString().slice(0,10)); cur.setUTCDate(cur.getUTCDate()+1); }
+    return out;
+  }
+
+  function processCensus(rows) {
+    const seen = new Set(), first = [];
+    for (const r of rows) { const d = r.created_at.slice(0,10); if (!seen.has(d)) { seen.add(d); first.push({...r,_d:d}); } }
+    if (!first.length) return { labels:[], datasets:{} };
+    const skip = ["id","created_at","_d"];
+    const cols = Object.keys(first[0]).filter(c => !skip.includes(c));
+    const byDate = {}; for (const r of first) byDate[r._d] = r;
+    const all = makeDateRange(first[0]._d, first.at(-1)._d);
+    const ds = {}; cols.forEach(c => ds[c]=[]); ds["Total"]=[];
+    let last = null;
+    for (const d of all) {
+      if (byDate[d]) last = byDate[d];
+      if (!last) continue;
+      let t = 0; cols.forEach(c => { const v = last[c]??0; ds[c].push(v); t+=v; }); ds["Total"].push(t);
+    }
+    return { labels: all, datasets: ds };
+  }
+
+  function processRescues(rows) {
+    if (!rows.length) return { labels:[], datasets:{} };
+    const rescues = [...new Set(rows.map(r=>`${r.rescue_name}__${r.island}`))];
+    const islands = [...new Set(rows.map(r=>r.island))].sort();
+    const fp = {};
+    for (const r of rows) { const d=r.created_at.slice(0,10), k=`${r.rescue_name}__${r.island}__${d}`; if (!fp[k]) fp[k]={date:d,island:r.island,rescue_name:r.rescue_name,total_dogs:r.total_dogs}; }
+    const deduped = Object.values(fp);
+    const brd = {};
+    const rescueFirstDate = {};
+    const rescueFirstValue = {};
+    for (const r of deduped) { 
+      const k=`${r.rescue_name}__${r.island}`; 
+      if (!brd[k]) brd[k]={};
+      brd[k][r.date]=r.total_dogs;
+      if (!rescueFirstDate[k] || r.date < rescueFirstDate[k]) {
+        rescueFirstDate[k] = r.date;
+        rescueFirstValue[k] = r.total_dogs;
+      }
+    }
+    const sorted = deduped.map(r=>r.date).sort();
+    const allD = makeDateRange(sorted[0], sorted.at(-1));
+    const lkr={}, ds={}; islands.forEach(i=>ds[i]=[]); ds["Total"]=[];
+    for (const d of allD) {
+      const it={};
+      for (const rk of rescues) {
+        const isl=rk.split("__")[1];
+        let v = brd[rk]?.[d];
+        if (v===undefined) {
+          if (d < rescueFirstDate[rk]) {
+            v = rescueFirstValue[rk];
+          } else {
+            v = lkr[rk] ?? 0;
+          }
+        }
+        if (v!==undefined) lkr[rk] = v;
+        it[isl]=(it[isl]||0)+(lkr[rk]??0);
+      }
+      let t=0; islands.forEach(isl=>{const v=it[isl]||0;ds[isl].push(v);t+=v;}); ds["Total"].push(t);
+    }
+    return { labels: allD, datasets: ds };
+  }
+
+  function slice(labels, datasets, from, to) {
+    const s = clamp(from || ABSOLUTE_START);
+    const e = to || labels.at(-1) || s;
+    const i0 = labels.findIndex(d => d >= s);
+    const i1 = [...labels].reverse().findIndex(d => d <= e);
+    if (i0 === -1) return { labels, datasets };
+    const end = i1 === -1 ? labels.length-1 : labels.length-1-i1;
+    const newL = labels.slice(i0, end+1);
+    const newDS = {};
+    for (const [k,v] of Object.entries(datasets)) newDS[k] = v.slice(i0, end+1);
+    return { labels: newL, datasets: newDS };
+  }
+
+  function toDelta(ds) {
+    const out = {};
+    for (const [k,v] of Object.entries(ds)) { const b = v.find(x=>x!=null)??0; out[k]=v.map(x=>x-b); }
+    return out;
+  }
+
+  const TOOLTIP = { backgroundColor:'#1e1e1e', titleFont:{size:9,weight:'400'}, bodyFont:{size:9}, padding:10, cornerRadius:0, titleColor:'#7a7a74', bodyColor:'#e8e8e4', borderColor:'#2e2e2e', borderWidth:1 };
+  const LEGEND  = { position:'bottom', align:'start', labels:{font:{size:9},padding:14,usePointStyle:true,pointStyle:'line',color:'#4a4a44',boxWidth:18} };
+  const YS = { grid:{color:'#181818',lineWidth:1}, border:{display:false}, ticks:{font:{size:9},color:'#4a4a44',maxTicksLimit:5} };
+  const XS = { grid:{display:false}, border:{display:false}, ticks:{font:{size:9},color:'#4a4a44',maxTicksLimit:6,maxRotation:0} };
+
+  function mkAbsDS(ds, mode) {
+    const keys = mode==='total' ? ['Total'] : Object.keys(ds);
+    return keys.map((k,i)=>{
+      const tot=k==='Total', solo=mode==='total';
+      return { label:fmtLabel(k), data:ds[k], fill:solo, borderColor:solo?'#e8c547':tot?'#e8e8e4':PAL[i%PAL.length], backgroundColor:solo?'#e8c54718':'transparent', borderWidth:tot?2:1, pointRadius:0, pointHoverRadius:3, tension:0.3, order:tot?0:1 };
+    });
+  }
+
+  function mkDeltaDS(ds, mode) {
+    const delta = toDelta(ds);
+    const keys = mode==='total' ? ['Total'] : Object.keys(delta);
+    return keys.map((k,i)=>{
+      const tot=k==='Total', solo=mode==='total';
+      return { label:fmtLabel(k), data:delta[k], fill:false, borderColor:solo?'#e8c547':tot?'#e8e8e4':PAL[i%PAL.length], backgroundColor:'transparent', borderWidth:tot?2:1, pointRadius:0, pointHoverRadius:3, tension:0.3, order:tot?0:1 };
+    });
+  }
+
+  function updateStats(rDS) {
+    const tot = rDS["Total"];
+    if (!tot?.length) return;
+    const delta = tot.at(-1) - tot[0];
+    const el = document.getElementById("s-delta");
+    el.textContent = fmtD(delta);
+    el.className = "stat-val " + (delta>0?'up':delta<0?'dn':'');
+    document.getElementById("s-delta-note").textContent = `rescue change since ${currentFrom}`;
+  }
+
+  function updateAll() {
+    const { labels:rL, datasets:rDS } = slice(ALL_R.labels, ALL_R.datasets, currentFrom, currentTo);
+    const { labels:cL, datasets:cDS } = slice(ALL_C.labels, ALL_C.datasets, currentFrom, currentTo);
+    updateStats(rDS);
+    if (absChart)   { absChart.data.labels = rL;   absChart.data.datasets   = mkAbsDS(rDS, absMode);   absChart.update(); }
+    if (deltaChart) { deltaChart.data.labels = rL; deltaChart.data.datasets = mkDeltaDS(rDS, deltaMode); deltaChart.update(); }
+    updateCensusCards(cL, cDS);
+    if (trendChart) { trendChart.data.labels = cL; trendChart.data.datasets[0].data = cDS["Total"]; trendChart.update(); }
+  }
+
+  function updateCensusCards(cL, cDS) {
+    const el = document.getElementById('census-cards');
+    if (!el) return;
+    const islands = Object.keys(cDS).filter(k=>k!=="Total").sort();
+    const maxVal = Math.max(...islands.map(isl=>cDS[isl].at(-1)??0));
+    el.innerHTML = islands.map(isl=>{
+      const vals=cDS[isl], latest=vals.at(-1)??0, first=vals.find(v=>v!=null)??0, delta=latest-first;
+      const pct=maxVal>0?(latest/maxVal)*100:0, cls=delta>0?'up':delta<0?'dn':'flat', arrow=delta>0?'↑':delta<0?'↓':'→';
+      return `<div class="island-card"><div class="ic-name">${fmtLabel(isl)}</div><div class="ic-val">${fmt(latest)}</div><div class="ic-change ${cls}">${arrow} ${fmtD(delta)}</div><div class="ic-bar" style="width:${pct.toFixed(1)}%"></div></div>`;
+    }).join('');
+  }
+
+  function renderRescue() {
+    const { labels:rL, datasets:rDS } = slice(ALL_R.labels, ALL_R.datasets, currentFrom, currentTo);
+    document.getElementById("rescue-section").innerHTML = `
+      <div class="section-head">
+        <div>
+          <div class="section-title">Dogs in <strong>Rescue</strong></div>
+          <div class="section-desc">Left: absolute count · Right: change from period start · toggle total / per island on each chart independently</div>
+        </div>
+      </div>
+      <div class="chart-pair">
+        <div class="chart-pane">
+          <div class="chart-pane-head">
+            <div class="chart-pane-label">Absolute count</div>
+            <div class="view-toggle" id="abs-toggle">
+              <button class="view-btn active" data-mode="total">Total</button>
+              <button class="view-btn" data-mode="islands">By island</button>
+            </div>
+          </div>
+          <div class="chart-wrap"><canvas id="cAbs"></canvas></div>
+        </div>
+        <div class="chart-pane">
+          <div class="chart-pane-head">
+            <div class="chart-pane-label">Change from period start</div>
+            <div class="view-toggle" id="delta-toggle">
+              <button class="view-btn active" data-mode="total">Total</button>
+              <button class="view-btn" data-mode="islands">By island</button>
+            </div>
+          </div>
+          <div class="chart-wrap"><canvas id="cDelta"></canvas></div>
+        </div>
+      </div>`;
+
+    absChart = new Chart(document.getElementById('cAbs'), {
+      type:'line', data:{labels:rL, datasets:mkAbsDS(rDS, absMode)},
+      options:{ responsive:true, maintainAspectRatio:false, interaction:{mode:'index',intersect:false},
+        plugins:{ legend:LEGEND, tooltip:{...TOOLTIP, callbacks:{label:c=>` ${c.dataset.label}: ${fmt(c.parsed.y)}`}} },
+        scales:{ y:{...YS, beginAtZero:false, ticks:{...YS.ticks, callback:v=>fmt(v)}}, x:XS } }
+    });
+
+    deltaChart = new Chart(document.getElementById('cDelta'), {
+      type:'line', data:{labels:rL, datasets:mkDeltaDS(rDS, deltaMode)},
+      options:{ responsive:true, maintainAspectRatio:false, interaction:{mode:'index',intersect:false},
+        plugins:{ legend:LEGEND, tooltip:{...TOOLTIP, callbacks:{label:c=>` ${c.dataset.label}: ${c.parsed.y>=0?'+':''}${fmt(c.parsed.y)}`}} },
+        scales:{ y:{...YS, beginAtZero:false, ticks:{...YS.ticks, callback:v=>(v>=0?'+':'')+fmt(v)}}, x:XS } }
+    });
+
+    document.getElementById('abs-toggle').addEventListener('click', e=>{
+      const btn=e.target.closest('.view-btn'); if (!btn) return;
+      absMode=btn.dataset.mode;
+      document.querySelectorAll('#abs-toggle .view-btn').forEach(b=>b.classList.toggle('active',b===btn));
+      const {labels:l2,datasets:d2}=slice(ALL_R.labels,ALL_R.datasets,currentFrom,currentTo);
+      absChart.data.labels=l2; absChart.data.datasets=mkAbsDS(d2,absMode); absChart.update();
+    });
+
+    document.getElementById('delta-toggle').addEventListener('click', e=>{
+      const btn=e.target.closest('.view-btn'); if (!btn) return;
+      deltaMode=btn.dataset.mode;
+      document.querySelectorAll('#delta-toggle .view-btn').forEach(b=>b.classList.toggle('active',b===btn));
+      const {labels:l2,datasets:d2}=slice(ALL_R.labels,ALL_R.datasets,currentFrom,currentTo);
+      deltaChart.data.labels=l2; deltaChart.data.datasets=mkDeltaDS(d2,deltaMode); deltaChart.update();
+    });
+  }
+
+  function renderCensus() {
+    const { labels:cL, datasets:cDS } = slice(ALL_C.labels, ALL_C.datasets, currentFrom, currentTo);
+    const islands = Object.keys(cDS).filter(k=>k!=="Total").sort();
+    const maxVal = Math.max(...islands.map(isl=>cDS[isl].at(-1)??0));
+    const cards = islands.map(isl=>{
+      const vals=cDS[isl], latest=vals.at(-1)??0, first=vals.find(v=>v!=null)??0, delta=latest-first;
+      const pct=maxVal>0?(latest/maxVal)*100:0, cls=delta>0?'up':delta<0?'dn':'flat', arrow=delta>0?'↑':delta<0?'↓':'→';
+      return `<div class="island-card"><div class="ic-name">${fmtLabel(isl)}</div><div class="ic-val">${fmt(latest)}</div><div class="ic-change ${cls}">${arrow} ${fmtD(delta)}</div><div class="ic-bar" style="width:${pct.toFixed(1)}%"></div></div>`;
+    }).join('');
+
+    document.getElementById("census-section").innerHTML = `
+      <div class="section-head">
+        <div>
+          <div class="section-title"><strong>Registered</strong> Dogs by Island</div>
+          <div class="section-desc">Latest snapshot · bar shows share relative to highest island · change within selected period</div>
+        </div>
+      </div>
+      <div class="island-cards" id="census-cards">${cards}</div>
+      <div style="margin-top:20px">
+        <div class="chart-pane-label" style="margin-bottom:12px">Total registered — trend</div>
+        <div class="chart-wrap-sm"><canvas id="cTrend"></canvas></div>
+      </div>`;
+
+    trendChart = new Chart(document.getElementById('cTrend'), {
+      type:'line', data:{ labels:cL, datasets:[{ label:'Total registered', data:cDS["Total"], fill:true, borderColor:'#e8c547', backgroundColor:'#e8c54710', borderWidth:1.5, pointRadius:0, pointHoverRadius:3, tension:0.3 }] },
+      options:{ responsive:true, maintainAspectRatio:false, interaction:{mode:'index',intersect:false},
+        plugins:{ legend:{display:false}, tooltip:{...TOOLTIP, callbacks:{label:c=>` Total: ${fmt(c.parsed.y)}`}} },
+        scales:{ y:{...YS, beginAtZero:false, ticks:{...YS.ticks, callback:v=>fmt(v)}}, x:XS } }
+    });
+  }
+
+  function applyRange(from, to, activeBtn) {
+    currentFrom = clamp(from || ABSOLUTE_START);
+    currentTo   = to || '';
+    document.querySelectorAll('.range-btn').forEach(b=>b.classList.remove('active'));
+    if (activeBtn) activeBtn.classList.add('active');
+    document.getElementById('date-from').value = currentFrom;
+    if (currentTo) document.getElementById('date-to').value = currentTo;
+    updateAll();
+  }
+
+  function downloadData() {
+    if (!ALL_C.labels || !ALL_C.labels.length || !ALL_R.labels || !ALL_R.labels.length) {
+      alert('No data available to download');
+      return;
+    }
+    const islands = Object.keys(ALL_C.datasets).filter(k => k !== 'Total').sort();
+    const cIslands = Object.keys(ALL_C.datasets).filter(k => k !== 'Total').sort();
+    const rIslands = Object.keys(ALL_R.datasets).filter(k => k !== 'Total').sort();
+    
+    // Use rescue data labels as primary (more complete)
+    const labels = ALL_R.labels;
+    const censusMap = {}; for (let i = 0; i < ALL_C.labels.length; i++) { censusMap[ALL_C.labels[i]] = i; }
+    
+    const rows = [];
+    const header = ['Date'];
+    cIslands.forEach(isl => header.push(`${isl} (Registered)`));
+    rIslands.forEach(isl => header.push(`${isl} (Rescue)`));
+    rows.push(header.join(','));
+    
+    for (let i = 0; i < labels.length; i++) {
+      const date = labels[i];
+      const row = [date];
+      const cIdx = censusMap[date];
+      cIslands.forEach(isl => row.push(cIdx !== undefined ? (ALL_C.datasets[isl][cIdx] || 0) : 0));
+      rIslands.forEach(isl => row.push(ALL_R.datasets[isl][i] || 0));
+      rows.push(row.join(','));
+    }
+    
+    const csv = rows.join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `sad-dogs-data-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+  }
+
+  async function load() {
+    try {
+      const [{data:cD,error:cE},{data:rD,error:rE}] = await Promise.all([
+        db.from("census").select("*").gte("created_at",ABSOLUTE_START).order("created_at",{ascending:true}),
+        db.from("rescues").select("*").gte("created_at",ABSOLUTE_START).order("created_at",{ascending:true}),
+      ]);
+      if (cE) throw cE; if (rE) throw rE;
+
+      ALL_C = processCensus(cD);
+      ALL_R = processRescues(rD);
+
+      currentTo = ALL_R.labels.at(-1) ?? '';
+      document.getElementById('date-from').value = ABSOLUTE_START;
+      document.getElementById('date-to').value = currentTo;
+
+      document.getElementById("s-rescued").textContent   = fmt(ALL_R.datasets["Total"]?.at(-1) ?? 0);
+      document.getElementById("s-registered").textContent = fmt(ALL_C.datasets["Total"]?.at(-1) ?? 0);
+      document.getElementById("s-days").textContent       = ALL_C.labels.length;
+      document.getElementById("last-updated").textContent = ALL_C.labels.at(-1) ?? ALL_R.labels.at(-1) ?? '—';
+      updateStats(ALL_R.datasets);
+
+      renderRescue();
+      renderCensus();
+
+    } catch(err) {
+      console.error(err);
+      ['rescue-section','census-section'].forEach(id=>{
+        document.getElementById(id).innerHTML=`<div style="padding:40px 0;font-family:'Space Mono',monospace;font-size:0.65rem;color:var(--muted-hi)">Error — ${err.message}</div>`;
+      });
+    }
+  }
+
+  document.querySelectorAll('.range-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const m=btn.dataset.months;
+      if (m==='all') applyRange(ABSOLUTE_START,'',btn);
+      else applyRange(offsetDate(parseInt(m)),'',btn);
+    });
+  });
+
+  document.getElementById('apply-custom').addEventListener('click', ()=>{
+    const from=document.getElementById('date-from').value;
+    const to=document.getElementById('date-to').value;
+    if (from) { document.querySelectorAll('.range-btn').forEach(b=>b.classList.remove('active')); applyRange(from,to,null); }
+  });
+
+  document.getElementById('download-btn').addEventListener('click', downloadData);
+
+  load();
+</script>
 </body>
 </html>
