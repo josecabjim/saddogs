@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sad Dogs — Canary Islands</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script type="module" src="js/main.js"></script>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="page">
+    <div class="topbar-inner">
+      <div class="logo">
+        <span class="logo-mark">Sad Dogs</span>
+        <div class="logo-sep"></div>
+        <span class="logo-sub">Canary Islands Rescue Monitor</span>
+      </div>
+      <nav></nav>
+      <div class="topbar-right">
+        <button class="download-btn" id="download-btn">↓ Download Data</button>
+        <div class="pulse"></div>
+        <span class="updated-txt" id="last-updated">—</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="stats-bar fade d1">
+  <div class="page">
+    <div class="stats-inner">
+      <div class="stat">
+        <div class="stat-label">Total in Rescue</div>
+        <div class="stat-val accent" id="s-rescued">—</div>
+        <div class="stat-note">all islands combined</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Registered Dogs</div>
+        <div class="stat-val" id="s-registered">—</div>
+        <div class="stat-note">census total</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Net Change</div>
+        <div class="stat-val" id="s-delta">—</div>
+        <div class="stat-note" id="s-delta-note">rescue vs. period start</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Days Tracked</div>
+        <div class="stat-val" id="s-days">—</div>
+        <div class="stat-note">since monitoring began</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="controls-bar fade d2">
+  <div class="page">
+    <div class="controls-inner">
+      <span class="controls-label">Period</span>
+      <div class="range-btns">
+        <button class="range-btn" data-months="1">1M</button>
+        <button class="range-btn" data-months="3">3M</button>
+        <button class="range-btn" data-months="6">6M</button>
+        <button class="range-btn active" data-months="all">All</button>
+      </div>
+      <div class="date-inputs">
+        <input type="date" class="date-input" id="date-from" min="2026-03-14">
+        <span class="date-sep">→</span>
+        <input type="date" class="date-input" id="date-to">
+        <button class="apply-btn" id="apply-custom">Apply</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="page fade d3">
+  <div class="section" id="rescue-section">
+    <div class="loader"><div class="loader-bar"></div><div class="loader-txt">Loading</div></div>
+  </div>
+  <div class="section" id="census-section">
+    <div class="loader"><div class="loader-bar"></div><div class="loader-txt">Loading</div></div>
+  </div>
+</div>
+
+<footer>
+  <div class="page">
+    <div class="footer-inner">
+      <span>Sad Dogs Analytics</span>
+      <span>Refreshes daily · Built to reduce suffering</span>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
