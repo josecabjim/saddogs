@@ -250,7 +250,7 @@
   let ALL_C = { labels: [], datasets: {} };
   let currentFrom = ABSOLUTE_START, currentTo = '';
   let absChart = null, deltaChart = null, trendChart = null;
-  let absMode = 'total', deltaMode = 'total';
+  let absMode = 'total', deltaMode = 'islands';
 
   const fmtLabel = k => k === "Total" ? "Total" : k.split("_").map(w => w[0].toUpperCase() + w.slice(1)).join(" ");
   const fmt = n => n?.toLocaleString('en-GB') ?? '—';
@@ -432,7 +432,7 @@
       <div class="section-head">
         <div>
           <div class="section-title">Dogs in <strong>Rescue</strong></div>
-          <div class="section-desc">Left: absolute count · Right: change from period start · toggle total / per island on each chart independently</div>
+          <div class="section-desc">Left: absolute count (toggle total/by island) · Right: change from period start (by island)</div>
         </div>
       </div>
       <div class="chart-pair">
@@ -449,10 +449,6 @@
         <div class="chart-pane">
           <div class="chart-pane-head">
             <div class="chart-pane-label">Change from period start</div>
-            <div class="view-toggle" id="delta-toggle">
-              <button class="view-btn active" data-mode="total">Total</button>
-              <button class="view-btn" data-mode="islands">By island</button>
-            </div>
           </div>
           <div class="chart-wrap"><canvas id="cDelta"></canvas></div>
         </div>
@@ -478,14 +474,6 @@
       document.querySelectorAll('#abs-toggle .view-btn').forEach(b=>b.classList.toggle('active',b===btn));
       const {labels:l2,datasets:d2}=slice(ALL_R.labels,ALL_R.datasets,currentFrom,currentTo);
       absChart.data.labels=l2; absChart.data.datasets=mkAbsDS(d2,absMode); absChart.update();
-    });
-
-    document.getElementById('delta-toggle').addEventListener('click', e=>{
-      const btn=e.target.closest('.view-btn'); if (!btn) return;
-      deltaMode=btn.dataset.mode;
-      document.querySelectorAll('#delta-toggle .view-btn').forEach(b=>b.classList.toggle('active',b===btn));
-      const {labels:l2,datasets:d2}=slice(ALL_R.labels,ALL_R.datasets,currentFrom,currentTo);
-      deltaChart.data.labels=l2; deltaChart.data.datasets=mkDeltaDS(d2,deltaMode); deltaChart.update();
     });
   }
 
