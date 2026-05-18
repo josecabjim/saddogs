@@ -307,7 +307,10 @@
       }
     }
     const sorted = deduped.map(r=>r.date).sort();
-    const allD = makeDateRange(sorted[0], sorted.at(-1));
+    // Extend to today or latest available date
+    const today = new Date().toISOString().slice(0, 10);
+    const latestDate = sorted.at(-1) > today ? sorted.at(-1) : today;
+    const allD = makeDateRange(sorted[0], latestDate);
     const lkr={}, ds={}; islands.forEach(i=>ds[i]=[]); ds["Total"]=[];
     for (const d of allD) {
       const it={};
@@ -389,7 +392,7 @@
         pointHoverRadius:3, 
         tension:0.3, 
         order:tot?0:1,
-        hidden: mode==='islands' && tot ? true : false
+        hidden: false
       };
     });
   }
