@@ -292,8 +292,31 @@
     const rescues = [...new Set(rows.map(r=>`${r.rescue_name}__${r.island}`))];
     const islands = [...new Set(rows.map(r=>r.island))].sort();
     const fp = {};
-    for (const r of rows) { const d=r.created_at.slice(0,10), k=`${r.rescue_name}__${r.island}__${d}`; if (!fp[k]) fp[k]={date:d,island:r.island,rescue_name:r.rescue_name,total_dogs:r.total_dogs}; }
-    const deduped = Object.values(fp);
+
+    for (const r of rows) {
+      const d = r.created_at.slice(0,10);
+      const k = `${r.rescue_name}__${r.island}__${d}`;
+
+      // keep latest timestamp for same rescue/day
+      if (
+        !fp[k] ||
+        new Date(r.created_at) > new Date(fp[k].created_at)
+      ) {
+        fp[k] = {
+          date: d,
+          island: r.island,
+          rescue_name: r.rescue_name,
+          total_dogs: r.total_dogs,
+          created_at: r.created_at
+        };
+      }
+    }
+    const deduped = Object.values(fp).map(r => ({
+      date: r.date,
+      island: r.island,
+      rescue_name: r.rescue_name,
+      total_dogs: r.total_dogs
+    }));
     const brd = {};
     const rescueFirstDate = {};
     const rescueFirstValue = {};
@@ -307,10 +330,7 @@
       }
     }
     const sorted = deduped.map(r=>r.date).sort();
-    // Extend to today or latest available date
-    const today = new Date().toISOString().slice(0, 10);
-    const latestDate = sorted.at(-1) > today ? sorted.at(-1) : today;
-    const allD = makeDateRange(sorted[0], latestDate);
+    const allD = makeDateRange(sorted[0], sorted.at(-1));
     const lkr={}, ds={}; islands.forEach(i=>ds[i]=[]); ds["Total"]=[];
     for (const d of allD) {
       const it={};
@@ -559,13 +579,44 @@
     window.URL.revokeObjectURL(url);
   }
 
+  async function fetchAllRescues() {
+    const pageSize = 1000;
+    let from = 0;
+    let finished = false;
+    let all = [];
+
+    while (!finished) {
+      const { data, error } = await db
+        .from("rescues")
+        .select("*")
+        .gte("created_at", ABSOLUTE_START)
+        .order("created_at", { ascending: true })
+        .range(from, from + pageSize - 1);
+
+      if (error) throw error;
+
+      all.push(...data);
+
+      if (data.length < pageSize) {
+        finished = true;
+      } else {
+        from += pageSize;
+      }
+    }
+
+    return all;
+  }
+
   async function load() {
     try {
-      const [{data:cD,error:cE},{data:rD,error:rE}] = await Promise.all([
-        db.from("census").select("*").gte("created_at",ABSOLUTE_START).order("created_at",{ascending:true}),
-        db.from("rescues").select("*").gte("created_at",ABSOLUTE_START).order("created_at",{ascending:true}),
+      const [{ data: cD, error: cE }, rD] = await Promise.all([
+        db.from("census")
+          .select("*")
+          .gte("created_at", ABSOLUTE_START)
+          .order("created_at", { ascending: true }),
+
+        fetchAllRescues()
       ]);
-      if (cE) throw cE; if (rE) throw rE;
 
       ALL_C = processCensus(cD);
       ALL_R = processRescues(rD);
