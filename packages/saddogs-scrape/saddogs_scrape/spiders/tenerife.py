@@ -65,7 +65,7 @@ class TenerifeAdejeMascotas(PlaywrightCountSpider):
     island = "Tenerife"
     start_urls = ["https://www.adeje.es/mascotas/mascotas-en-adopcion"]
     selector = "div.ListadoImgItem"
-    next_button_selector = None
+    next_button_selector = None  # Add pagination selector if needed
     use_proxy = True
 
     custom_settings = {
@@ -79,7 +79,6 @@ class TenerifeAdejeMascotas(PlaywrightCountSpider):
         "PLAYWRIGHT_LAUNCH_OPTIONS": {
             "headless": True,
             "args": ["--no-sandbox", "--disable-setuid-sandbox"],
-            "proxy": None,  # Disable proxy for Playwright
         },
     }
 
