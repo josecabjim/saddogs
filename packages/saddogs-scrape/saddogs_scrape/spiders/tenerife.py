@@ -49,7 +49,7 @@ class TenerifeRefugioInternacional(CountSpider):
     pagination_selector = "a.next.page-numbers::attr(href)"
 
 
-# TODO remove if adeje is fixed
+# TODO remove if adeje with playwright works
 # class TenerifeAdejeMascotas(CountSpider):
 #     name = "tenerife_adeje_mascotas"
 #     rescue_name = "Adeje Mascotas"
@@ -65,7 +65,7 @@ class TenerifeAdejeMascotas(PlaywrightCountSpider):
     island = "Tenerife"
     start_urls = ["https://www.adeje.es/mascotas/mascotas-en-adopcion"]
     selector = "div.ListadoImgItem"
-    next_button_selector = None  # Add pagination selector if needed
+    next_button_selector = None
     use_proxy = True
 
     custom_settings = {
@@ -79,6 +79,7 @@ class TenerifeAdejeMascotas(PlaywrightCountSpider):
         "PLAYWRIGHT_LAUNCH_OPTIONS": {
             "headless": True,
             "args": ["--no-sandbox", "--disable-setuid-sandbox"],
+            "proxy": None,  # Disable proxy for Playwright
         },
     }
 
