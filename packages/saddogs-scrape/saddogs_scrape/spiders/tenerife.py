@@ -49,13 +49,53 @@ class TenerifeRefugioInternacional(CountSpider):
     pagination_selector = "a.next.page-numbers::attr(href)"
 
 
-class TenerifeAdejeMascotas(CountSpider):
+# TODO remove if adeje is fixed
+# class TenerifeAdejeMascotas(CountSpider):
+#     name = "tenerife_adeje_mascotas"
+#     rescue_name = "Adeje Mascotas"
+#     island = "Tenerife"
+#     start_urls = ["https://www.adeje.es/mascotas/mascotas-en-adopcion"]
+#     selector = "div.ListadoImgItem"
+#     use_proxy = True
+
+
+class TenerifeAdejeMascotas(PlaywrightCountSpider):
     name = "tenerife_adeje_mascotas"
     rescue_name = "Adeje Mascotas"
     island = "Tenerife"
     start_urls = ["https://www.adeje.es/mascotas/mascotas-en-adopcion"]
     selector = "div.ListadoImgItem"
+    next_button_selector = None  # Add pagination selector if needed
     use_proxy = True
+
+    custom_settings = {
+        "ROBOTSTXT_OBEY": False,
+        "DOWNLOAD_HANDLERS": {
+            "http": "scrapy_playwright.handler.ScrapyPlaywrightDownloadHandler",
+            "https": "scrapy_playwright.handler.ScrapyPlaywrightDownloadHandler",
+        },
+        "TWISTED_REACTOR": "twisted.internet.asyncioreactor.AsyncioSelectorReactor",
+        "PLAYWRIGHT_BROWSER_TYPE": "chromium",
+        "PLAYWRIGHT_LAUNCH_OPTIONS": {
+            "headless": True,
+            "args": ["--no-sandbox", "--disable-setuid-sandbox"],
+        },
+    }
+
+    def start_requests(self):
+        for url in self.start_urls:
+            yield scrapy.Request(
+                url,
+                meta={
+                    "playwright": True,
+                    "playwright_include_page": True,
+                    "playwright_page_goto_kwargs": {
+                        "wait_until": "networkidle",
+                        "timeout": 60000,
+                    },
+                },
+                callback=self.parse,
+            )
 
 
 class TenerifeAdepac(PlaywrightCountSpider):
