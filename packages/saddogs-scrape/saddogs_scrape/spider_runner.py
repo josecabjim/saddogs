@@ -136,12 +136,12 @@ def run_all_spiders(spider_names=None, verbose=False, dry_run=False):
     monitor = SpiderMonitor()
     settings = get_project_settings()
 
-    # Set proxy for all spiders via Scrapy settings
-    proxy_url = os.environ.get("ADEJE_PROXY_URL")
-    if proxy_url:
-        settings.set("HTTP_PROXY", proxy_url, priority="project")
-        settings.set("HTTPS_PROXY", proxy_url, priority="project")
-        logger.info(f"Proxy enabled for all spiders: {proxy_url}")
+    # Don't set proxy globally - let each spider decide
+    # proxy_url = os.environ.get("ADEJE_PROXY_URL")
+    # if proxy_url:
+    #     settings.set("HTTP_PROXY", proxy_url, priority="project")
+    #     settings.set("HTTPS_PROXY", proxy_url, priority="project")
+    #     logger.info(f"Proxy enabled for all spiders: {proxy_url}")
 
     process = CrawlerProcess(settings)
 
@@ -152,3 +152,34 @@ def run_all_spiders(spider_names=None, verbose=False, dry_run=False):
 
     process.start()
     return monitor
+
+
+# def run_all_spiders(spider_names=None, verbose=False, dry_run=False):
+#     configure_logging({"LOG_LEVEL": "DEBUG" if verbose else "INFO"})
+#     logger = logging.getLogger(__name__)
+#     spider_classes = load_spiders(spider_names)
+#     logger.info(f"Spiders to run: {[s.__name__ for s in spider_classes]}")
+
+#     if not spider_classes:
+#         logger.warning("No spiders found.")
+#         return SpiderMonitor()
+
+#     monitor = SpiderMonitor()
+#     settings = get_project_settings()
+
+#     # Set proxy for all spiders via Scrapy settings
+#     proxy_url = os.environ.get("ADEJE_PROXY_URL")
+#     if proxy_url:
+#         settings.set("HTTP_PROXY", proxy_url, priority="project")
+#         settings.set("HTTPS_PROXY", proxy_url, priority="project")
+#         logger.info(f"Proxy enabled for all spiders: {proxy_url}")
+
+#     process = CrawlerProcess(settings)
+
+#     for spider_class in spider_classes:
+#         crawler = process.create_crawler(spider_class)
+#         crawler.signals.connect(monitor.spider_closed, signal=signals.spider_closed)
+#         process.crawl(crawler, dry_run=dry_run)
+
+#     process.start()
+#     return monitor
