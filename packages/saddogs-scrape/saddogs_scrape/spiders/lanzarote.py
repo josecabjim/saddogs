@@ -31,7 +31,7 @@ class LanzaroteCasaEstrellas(PlaywrightCountSpider):
     rescue_name = "Casa de las Estrellas"
     island = "Lanzarote"
 
-    start_urls = ["https://www.casa-de-las-estrellas.org/es/dogs"]
+    start_urls = ["https://www.casa-de-las-estrellas.org/dogs"]
 
     custom_settings = {
         "ROBOTSTXT_OBEY": False,
@@ -47,7 +47,7 @@ class LanzaroteCasaEstrellas(PlaywrightCountSpider):
         },
     }
 
-    selector = "div.item-link-wrapper"
+    selector = "#dogs-grid-adoption article.dog-card"
 
     def start_requests(self):
         for url in self.start_urls:
