@@ -72,4 +72,4 @@ jobs:
         run: |
           cd packages/saddogs-scrape/saddogs_scrape
           echo "Proxy set: ${{ secrets.ADEJE_PROXY_URL != '' }}"
-          poetry run python run_all.py --spiders "$MISSING" || true
+          poetry run python run_all.py --spiders "$MISSING"

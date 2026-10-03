@@ -1,22 +1,31 @@
+import re
+
 import scrapy
 from scrapy import Selector
 from spiders.base.base_spider import BaseRescueSpider
 
 
 class AspNetAjaxCountSpider(BaseRescueSpider):
-    search_event_target = "dnn$ctr383$View$lnkSearch"
-    results_selector = "span#dnn_ctr383_View_lblTotal::text"
+    """DNN/ASP.NET WebForms module. The `ctrNNN` control-id segment is assigned
+    per-install by DNN and drifts whenever the site republishes the module, so
+    it's read from the page itself rather than hardcoded."""
 
     custom_settings = {"ROBOTSTXT_OBEY": False}
 
     def parse(self, response):
 
+        match = re.search(r"dnn_(ctr\d+)_View_lnkSearch", response.text)
+        if not match:
+            raise ValueError(f"{self.name}: Could not locate DNN control id")
+        ctr = match.group(1)
+        search_event_target = f"dnn${ctr}$View$lnkSearch"
+
         formdata = {
-            "ScriptManager": f"ScriptManager|{self.search_event_target}",
+            "ScriptManager": f"ScriptManager|{search_event_target}",
             "dnn$dnnSearch2$txtSearch": "",
-            "dnn$ctr383$View$chkPerro": "on",
-            "dnn$ctr383$View$num_resultados": "19",
-            "dnn$ctr383$View$pagina_actual": "1",
+            f"dnn${ctr}$View$chkPerro": "on",
+            f"dnn${ctr}$View$num_resultados": "19",
+            f"dnn${ctr}$View$pagina_actual": "1",
             "ScrollTop": "0",
             "__dnnVariable": response.css(
                 "input[name='__dnnVariable']::attr(value)"
@@ -24,7 +33,7 @@ class AspNetAjaxCountSpider(BaseRescueSpider):
             "__RequestVerificationToken": response.css(
                 "input[name='__RequestVerificationToken']::attr(value)"
             ).get(),
-            "__EVENTTARGET": self.search_event_target,
+            "__EVENTTARGET": search_event_target,
             "__EVENTARGUMENT": "",
             "__VIEWSTATE": response.css("input[name='__VIEWSTATE']::attr(value)").get(),
             "__VIEWSTATEGENERATOR": response.css(
@@ -41,6 +50,7 @@ class AspNetAjaxCountSpider(BaseRescueSpider):
             url=response.url,
             formdata=formdata,
             callback=self.parse_results,
+            meta={"ctr": ctr},
             headers={
                 "X-MicrosoftAjax": "Delta=true",
                 "X-Requested-With": "XMLHttpRequest",
@@ -67,7 +77,9 @@ class AspNetAjaxCountSpider(BaseRescueSpider):
 
         sel = Selector(text=html_fragment)
 
-        total_text = sel.css(self.results_selector).get()
+        ctr = response.meta["ctr"]
+        results_selector = f"span#dnn_{ctr}_View_lblTotal::text"
+        total_text = sel.css(results_selector).get()
 
         if not total_text:
             raise ValueError(f"{self.name}: Could not extract total count")
