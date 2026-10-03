@@ -1,24 +1,19 @@
 import scrapy
 from spiders.base.count_spider import CountSpider
+from spiders.base.playwright_regex_spider import PlaywrightRegexSpider
 from spiders.base.playwright_spider import PlaywrightCountSpider
 from spiders.base.regex_spider import RegexSpider
 
 
-class TenerifeValleColino(RegexSpider):
+class TenerifeValleColino(PlaywrightRegexSpider):
     name = "tenerife_valle_colino"
 
     rescue_name = "Albergue Valle Colino"
     island = "Tenerife"
 
-    custom_settings = {
-        "USER_AGENT": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0 Safari/537.36",
-        "CONCURRENT_REQUESTS": 4,
-        "DOWNLOAD_DELAY": 1,
-        "RETRY_ENABLED": True,
-        "RETRY_TIMES": 5,
-        "DOWNLOAD_TIMEOUT": 30,
-    }
-
+    # Plain Scrapy requests get soft-blocked (202/403, no real content) by this
+    # site's bot mitigation regardless of source IP — confirmed by testing the
+    # exact same residential IP with curl (403) vs. Playwright (200, clean).
     start_urls = ["https://www.alberguevallecolino.org/adoptar/perros"]
 
     text_selector = "div.col-sm-6.text-right"
