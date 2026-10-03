@@ -44,12 +44,18 @@ class TenerifeRefugioInternacional(CountSpider):
     pagination_selector = "a.next.page-numbers::attr(href)"
 
 
-class TenerifeAdejeMascotas(CountSpider):
-    name = "tenerife_adeje_mascotas"
-    rescue_name = "Adeje Mascotas"
-    island = "Tenerife"
-    start_urls = ["https://www.adeje.es/mascotas/mascotas-en-adopcion"]
-    selector = "div.ListadoImgItem"
+# Retired 2026-10-03: the site's own listing page now shows zero animals
+# (confirmed by eye, not by this spider — the widget that renders listings was
+# never successfully scraped, see OPERATIONS.md), and has been effectively
+# unreadable for months before that. Treating this as abandoned rather than
+# continuing to retry; a one-off confirmed 0 row was recorded for today and no
+# further scrapes are attempted. Revisit if the site is ever rebuilt.
+# class TenerifeAdejeMascotas(CountSpider):
+#     name = "tenerife_adeje_mascotas"
+#     rescue_name = "Adeje Mascotas"
+#     island = "Tenerife"
+#     start_urls = ["https://www.adeje.es/mascotas/mascotas-en-adopcion"]
+#     selector = "div.ListadoImgItem"
 
 
 class TenerifeAdepac(PlaywrightCountSpider):

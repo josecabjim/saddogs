@@ -2,7 +2,6 @@
 
 import importlib
 import logging
-import os
 import pkgutil
 
 import spiders as spiders_pkg
@@ -141,14 +140,6 @@ def run_all_spiders(spider_names=None, verbose=False, dry_run=False):
 
     monitor = SpiderMonitor()
     settings = get_project_settings()
-
-    # Set proxy for all spiders via Scrapy settings
-    proxy_url = os.environ.get("ADEJE_PROXY_URL")
-    if proxy_url:
-        settings.set("HTTP_PROXY", proxy_url, priority="project")
-        settings.set("HTTPS_PROXY", proxy_url, priority="project")
-        logger.info(f"Proxy enabled for all spiders: {proxy_url}")
-
     process = CrawlerProcess(settings)
 
     for spider_class in spider_classes:

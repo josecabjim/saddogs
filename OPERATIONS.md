@@ -86,5 +86,39 @@ with no explanation, suspect this before assuming the pipeline itself is healthy
 | `gran_canaria_telde` | ✅ fixed, confirmed live on GH Actions | DNN module control-id (`ctrNNN`) drifted from `ctr383` to `ctr397` after the site republished — `AspNetAjaxCountSpider` had it hardcoded | Now read from the page itself (`spiders/base/aspnet_ajax_spider.py`), which also hardens `gran_canaria_banaderos` against the same future drift |
 | `tenerife_valle_colino` | ✅ fixed, confirmed live on GH Actions | Request-fingerprint/bot-mitigation soft-block, not IP reputation: the same residential IP got a 403 via `curl`/Scrapy but 200 via Playwright's real Chromium; GH Actions got a 202 (not even a 403) with the plain client | Switched to `PlaywrightRegexSpider` (renders with real Chromium, same selector/regex as before) |
 | `fuerteventura_dog_rescue` | ❌ disabled | `fuerteventuradogrescue.org` has been squatted by an unrelated gambling site (redirects to `rubyselixirdtsp.com`) — the domain is gone, not just redesigned. No replacement URL found (Facebook page still active) | Disabled in `spiders/fuerteventura.py` with a dated comment; revisit if a new URL turns up |
-| `tenerife_adeje_mascotas` | ❌ unresolved, better-understood | Not simply "JS-rendered" as previously assumed. The page embeds the actual pet listing via a third-party municipal-services widget (`insuit.net`) inside a nested iframe setup; the widget's content never materializes at the expected selector even after 20s+ waits with a real browser, and `networkidle` never fires (the widget keeps background network activity alive). This needs reverse-engineering the widget's internal tab/API — not attempted further, consistent with the original spec's call to treat Adeje as its own deprioritized line item | None — matches history of proxy/Playwright attempts not panning out for this one specific site |
+| `tenerife_adeje_mascotas` | ❌ retired 2026-10-03 | Not simply "JS-rendered" as previously assumed — the page embeds the actual pet listing via a third-party municipal-services widget (`insuit.net`) inside a nested iframe setup that never materializes at the expected selector even after 20s+ waits with a real browser. But separately, and more decisively: the live page now shows zero animals listed (confirmed by eye on adeje.es directly, 2026-10-03), and the last *successful* scrape before that was 2026-06-27 — over three months with no true read. Treated as abandoned rather than worth continuing to chase the widget | Spider commented out in `spiders/tenerife.py`; see "Retired rescues" below for how the historical data was closed out |
 | `la_gomera_proanimal` | ❌ unreachable, re-confirmed | TLS handshake hangs on both http/https, confirmed independently via two unrelated networks (this laptop and Anthropic's fetch infrastructure) — the site itself is down, not a scraper or runner problem | No action; will clear on its own if/when the site comes back, otherwise the 7-day stale alert will catch it |
+
+## Retired rescues: Adeje Mascotas and Fuerteventura Dog Rescue (2026-10-03)
+
+Both rescues' source sites are gone, and both spiders are now disabled (commented out, not deleted,
+in `spiders/tenerife.py` and `spiders/fuerteventura.py`) rather than left to retry forever. Disabling
+the spider is enough to drop a retired rescue out of `check_missing.py`'s "missing today" and
+`get_stale_spider_names`'s "stale 7+ days" monitoring — both derive their "known rescues" list from
+`load_spiders()`, so a commented-out spider simply stops being tracked (same mechanism already used
+for `fuerteventura_dog_rescue`). The two historical data series were closed out differently, because
+the evidence available for each was different:
+
+- **Adeje Mascotas**: the current true count is actually known — browsing `adeje.es` directly on
+  2026-10-03 shows zero animals listed. That's a real, confirmed observation, just not one the
+  spider produced. A single row (`total_dogs=0`, `needs_review=false`, dated 2026-10-03) was
+  inserted by hand to close the series honestly. It is **not** backdated to 2026-06-27 (the last
+  successful scrape) or to any point in between — we have no evidence of exactly when the count
+  actually dropped to zero over those three-plus months, so the chart will show a flat line at the
+  last real scraped value (14) through 2026-06-27, then a gap, then a single-day drop to 0 on
+  2026-10-03. That discontinuity is the honest shape of what we actually know, not a bug.
+- **Fuerteventura Dog Rescue**: no current read is possible at all — the domain is squatted by an
+  unrelated site, not merely redesigned, so there's no page left to even eyeball. Forcing this one to
+  0 would be a guess dressed up as data. Its last real row (`total_dogs=6`, 2026-08-05) stands as the
+  final data point; no synthetic row was added.
+
+**Known limitation, accepted for now**: `index.html`'s forward-fill (per SPEC.md §7/§9) carries the
+last real value forward indefinitely for *any* stale rescue, and retired rescues are no exception —
+Fuerteventura Dog Rescue's "6" (and Adeje's new "0") will keep counting toward island/total figures
+forever, not just until some cutoff. The per-rescue "last real update: N days ago" card already
+exposes the staleness honestly, and SPEC.md §9 already accepted silent carry-forward as the intended
+behavior for ordinary staleness — this just means that policy now also applies, indefinitely, to
+rescues that are never coming back, which SPEC.md didn't anticipate. No dashboard change was made for
+this; if the growing list of retired-but-still-counted rescues becomes noticeable, a future pass
+should give retired rescues a real end date and have `processRescues` stop counting them after it,
+rather than forward-filling forever.

@@ -83,9 +83,6 @@ Required environment variables (loaded via `.env` / `python-dotenv` in most entr
 - `SUPABASE_PUBLISHABLE_KEY` — `projects/saddogs-api/main.py` and `scripts/fetch_census.py`.
 - `EMAIL_FROM`, `EMAIL_TO`, `EMAIL_PASSWORD` — Gmail SMTP creds used by `send_failure_email.py`
   (health-check and daily-summary failure emails).
-- `ADEJE_PROXY_URL` — optional; when set, `spider_runner.run_all_spiders` applies it as a global
-  `HTTP_PROXY`/`HTTPS_PROXY` for the entire run. It is not actually scoped per-spider — the
-  `use_proxy = True` flag on `TenerifeAdejeMascotas` in `spiders/tenerife.py` is unused/dead.
 
 ## Architecture
 
