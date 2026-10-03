@@ -3,6 +3,20 @@
 Operational notes that aren't discoverable from the code itself. See `SPEC.md` for the reliability
 work these came out of.
 
+## `saddogs-database` path-dependency goes stale silently
+
+`packages/saddogs-scrape` and `packages/saddogs-api` (deleted, but if this pattern is reused
+elsewhere) depend on `saddogs-database` via a local path dependency. `poetry install` in
+`saddogs-scrape` does **not** reliably pick up source changes made in `saddogs-database` — it's
+installed as a built, non-editable copy, and `poetry install`/`poetry install --sync` often report
+"nothing to do" even after `saddogs-database`'s code has changed. If `saddogs-scrape` seems to be
+running old `saddogs-database` behavior (missing methods, old signatures), force a reinstall from
+inside `packages/saddogs-scrape`:
+
+```bash
+poetry run pip install --force-reinstall --no-deps ../saddogs-database
+```
+
 ## GitHub Pages deployment
 
 `caballerojose.com/saddogs` is served by GitHub Pages configured directly on this repo
@@ -25,12 +39,14 @@ poetry run python check_missing.py        # prints spider names still missing to
 poetry run python run_all.py --spiders tenerife_k9,census   # only the ones check_missing.py listed
 ```
 
-Requires a `.env` in `packages/saddogs-scrape/saddogs_scrape/` (or exported in your shell — nothing
-in this package currently calls `load_dotenv()`, unlike `packages/saddogs-database/saddogs_database/env.py`)
-with:
+Requires a `.env` in `packages/saddogs-scrape/saddogs_scrape/` (or exported in your shell —
+`spider_runner.py` calls `load_dotenv()`, and every entry point imports it) with:
 
 - `SUPABASE_URL`
 - `SUPABASE_SERVICE_ROLE_KEY` (same values as the GitHub Actions secrets)
+
+The easiest way to get these locally is to copy them from `packages/saddogs-database/.env`, which
+already has them (same Supabase project).
 
 To verify it ran: `check_missing.py` should print `__none__` afterward, or check the newest
 `reports/*.json` file's timestamp/summary. If the laptop is off that day, nothing runs — accepted as

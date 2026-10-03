@@ -6,10 +6,16 @@ import os
 import pkgutil
 
 import spiders as spiders_pkg
+from dotenv import load_dotenv
 from scrapy import Spider, signals
 from scrapy.crawler import CrawlerProcess
 from scrapy.utils.log import configure_logging
 from scrapy.utils.project import get_project_settings
+
+# Every entry point (run_all.py, check_missing.py, daily_summary.py) imports
+# this module, so loading .env here covers all of them. GitHub Actions sets
+# these as real env vars directly, so load_dotenv() is a no-op there.
+load_dotenv()
 
 KNOWN_FLAKY_SPIDERS = {"lanzarote_teguise"}
 

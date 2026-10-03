@@ -12,6 +12,7 @@ scrapy = "^2.14.1"
 supabase = "^2.28.0"
 psycopg2-binary = "^2.9.11"
 scrapy-playwright = "^0.0.46"
+python-dotenv = "^1.2.1"
 saddogs-database = { path = "../saddogs-database" }
 
 [build-system]
