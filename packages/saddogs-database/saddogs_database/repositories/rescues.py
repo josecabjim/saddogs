@@ -36,11 +36,14 @@ class RescueRepository:
 
         return data[0]["total_dogs"]
 
-    def save_count(self, rescue_name: str, island: str, count: int):
+    def save_count(
+        self, rescue_name: str, island: str, count: int, needs_review: bool = False
+    ):
         data = {
             "rescue_name": rescue_name,
             "island": island,
             "total_dogs": count,
+            "needs_review": needs_review,
         }
 
         return self.client.table("rescues").insert(data).execute()
@@ -68,4 +71,30 @@ class RescueRepository:
         scraped_today = {(row["rescue_name"], row["island"]) for row in response.data}
 
         return [pair for pair in known_pairs if pair not in scraped_today]
-        return [pair for pair in known_pairs if pair not in scraped_today]
+
+    def get_latest_clean_dates(self) -> dict[tuple[str, str], str]:
+        """Most recent created_at per (rescue_name, island), ignoring needs_review rows."""
+        response = (
+            self.client.table("rescues")
+            .select("rescue_name, island, created_at")
+            .eq("needs_review", False)
+            .order("created_at", desc=True)
+            .execute()
+        )
+
+        latest: dict[tuple[str, str], str] = {}
+        for row in response.data or []:
+            key = (row["rescue_name"], row["island"])
+            if key not in latest:
+                latest[key] = row["created_at"]
+        return latest
+
+    def get_recent_needs_review(self, since_iso: str) -> list[dict]:
+        response = (
+            self.client.table("rescues")
+            .select("*")
+            .eq("needs_review", True)
+            .gte("created_at", since_iso)
+            .execute()
+        )
+        return response.data or []

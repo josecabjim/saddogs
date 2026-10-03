@@ -37,12 +37,17 @@ class BaseRescueSpider(BaseSpider):
 
         previous = self.get_previous_count()
 
-        validate_against_previous(self.name, previous, count)
+        needs_review = validate_against_previous(self.name, previous, count)
+        if needs_review:
+            self.logger.warning(
+                f"{self.name}: flagging for review (previous={previous}, current={count})"
+            )
 
         data = {
             "rescue_name": self.rescue_name,
             "island": self.island,
             "total_dogs": count,
+            "needs_review": needs_review,
         }
 
         if self.dry_run:
@@ -52,6 +57,7 @@ class BaseRescueSpider(BaseSpider):
                 self.rescue_name,
                 self.island,
                 count,
+                needs_review=needs_review,
             )
             self.logger.info(f"Saved result: {data}")
 

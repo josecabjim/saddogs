@@ -32,3 +32,27 @@ class CensusRepository:
 
     def save(self, data: Dict):
         return self.client.table("census").upsert(data).execute()
+
+    def get_latest_clean(self) -> Optional[Dict]:
+        """Most recent row ignoring needs_review rows."""
+        response = (
+            self.client.table("census")
+            .select("*")
+            .eq("needs_review", False)
+            .order("created_at", desc=True)
+            .limit(1)
+            .execute()
+        )
+
+        data = response.data
+        return data[0] if data else None
+
+    def get_recent_needs_review(self, since_iso: str) -> list[Dict]:
+        response = (
+            self.client.table("census")
+            .select("*")
+            .eq("needs_review", True)
+            .gte("created_at", since_iso)
+            .execute()
+        )
+        return response.data or []

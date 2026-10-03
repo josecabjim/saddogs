@@ -51,11 +51,15 @@ class CensusSpider(BaseSpider):
                 )
 
     # TODO should move to database
-    def validate_against_previous_census(self, previous: Dict, current: Dict[str, int]):
-        """Validate current census against previous to detect anomalies."""
+    def validate_against_previous_census(
+        self, previous: Dict, current: Dict[str, int]
+    ) -> bool:
+        """Return True if any island's count looks anomalous vs. previous (caller
+        should save the row with needs_review=True instead of dropping it)."""
         if not previous:
-            return  # No previous data to validate against
+            return False
 
+        anomalous = False
         for island, current_count in current.items():
             previous_count = previous.get(island)
             if previous_count is None:
@@ -63,15 +67,19 @@ class CensusSpider(BaseSpider):
 
             # Check for drastic drops (more than 50% decrease)
             if current_count < previous_count * 0.5:
-                raise ValueError(
+                self.logger.warning(
                     f"{self.name}: Anomaly detected in {island}: count dropped from {previous_count} to {current_count}"
                 )
+                anomalous = True
 
             # Check for extreme increases (more than 200% increase)
             if current_count > previous_count * 3:
-                raise ValueError(
+                self.logger.warning(
                     f"{self.name}: Anomaly detected in {island}: count jumped from {previous_count} to {current_count}"
                 )
+                anomalous = True
+
+        return anomalous
 
     def parse_table(self, response) -> Dict[str, list[str]]:
         # Handle special case: first header cell is wrapped in <span>
@@ -130,7 +138,9 @@ class CensusSpider(BaseSpider):
 
         # Validate against previous census
         previous = self.get_previous_census()
-        self.validate_against_previous_census(previous, data_db)
+        data_db["needs_review"] = self.validate_against_previous_census(
+            previous, data_db
+        )
 
         self.save_result(data_db)
         yield data_db
