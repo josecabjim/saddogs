@@ -1,5 +1,14 @@
 # Saddogs — Reliability & Consolidation Spec
 
+> **Status (2026-10-03): executed.** Every phase below shipped — Phase 0 triage, Phase 1 dead-code
+> cleanup, Phase 2 `needs_review`, Phase 3's three-section email, and Phase 4's frontend/backend
+> deletions are all live in the code. The one exception is §6.1's laptop-fallback recommendation,
+> which was never built: follow-up investigation found GitHub Actions wasn't actually IP-blocked, so
+> the fallback this section exists to provide turned out to be unnecessary (see OPERATIONS.md's
+> "GitHub Actions IP-block hypothesis" and "Retired rescues" sections for what's actually true
+> today). This doc is kept as-is below for the reasoning and the original goals/constraints — treat
+> OPERATIONS.md as the up-to-date operational reference, and CLAUDE.md for current repo structure.
+
 ## 1. Problem statement
 
 Saddogs tracks daily dog counts for ~20 rescues across the Canary Islands plus a government

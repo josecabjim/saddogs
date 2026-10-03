@@ -5,8 +5,8 @@ work these came out of.
 
 ## `saddogs-database` path-dependency goes stale silently
 
-`packages/saddogs-scrape` and `packages/saddogs-api` (deleted, but if this pattern is reused
-elsewhere) depend on `saddogs-database` via a local path dependency. `poetry install` in
+`packages/saddogs-scrape` (and the now-deleted `projects/saddogs-api`, if this pattern is ever
+reused elsewhere) depends on `saddogs-database` via a local path dependency. `poetry install` in
 `saddogs-scrape` does **not** reliably pick up source changes made in `saddogs-database` — it's
 installed as a built, non-editable copy, and `poetry install`/`poetry install --sync` often report
 "nothing to do" even after `saddogs-database`'s code has changed. If `saddogs-scrape` seems to be
@@ -72,7 +72,8 @@ scheduled dependency.
 ## EMAIL_* secret rotation blind spot
 
 The 22:00 UTC daily-summary email (via `send_failure_email.py`'s Gmail SMTP login) is the main
-trustworthy signal once the pipeline email bug is fixed. If `EMAIL_FROM`/`EMAIL_TO`/`EMAIL_PASSWORD`
+trustworthy signal, now that it reports three clearly-separated sections (missing today, needs
+review, stale 7+ days) instead of just "missing today". If `EMAIL_FROM`/`EMAIL_TO`/`EMAIL_PASSWORD`
 ever rotate or expire, this fails silently (`send_daily_report`/`send_failure_email` just log a
 warning and return `False` — the GH Actions job still exits based on whether there was anything to
 report, independent of whether the email actually sent). If the daily email ever just stops arriving
