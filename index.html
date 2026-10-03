@@ -110,6 +110,12 @@
     .ic-change.dn { color: var(--green); }
     .ic-change.flat { color: var(--muted-hi); }
     .ic-bar { position: absolute; bottom: 0; left: 0; height: 2px; background: var(--accent); opacity: 0.35; }
+    .ic-stale { font-family: 'Space Mono', monospace; font-size: 0.56rem; margin-top: 5px; color: var(--muted-hi); white-space: nowrap; }
+    .ic-stale.warn { color: var(--accent); }
+    .ic-stale.bad { color: var(--red); }
+
+    /* RESCUE CARDS — grid, wraps to as many rows as needed */
+    .rescue-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 2px; margin-bottom: 20px; }
 
     /* LOADER */
     .loader { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 200px; gap: 14px; }
@@ -256,6 +262,8 @@
   const fmt = n => n?.toLocaleString('en-GB') ?? '—';
   const fmtD = n => n == null ? '—' : (n >= 0 ? '+' : '') + n.toLocaleString('en-GB');
   const clamp = d => d < ABSOLUTE_START ? ABSOLUTE_START : d;
+  const daysAgo = d => Math.round((new Date(new Date().toISOString().slice(0,10)+"T00:00:00Z") - new Date(d+"T00:00:00Z")) / 86400000);
+  const fmtStale = days => days <= 0 ? 'today' : days === 1 ? '1 day ago' : `${days} days ago`;
 
   function offsetDate(months) {
     const d = new Date();
@@ -271,9 +279,12 @@
 
   function processCensus(rows) {
     const seen = new Set(), first = [];
-    for (const r of rows) { const d = r.created_at.slice(0,10); if (!seen.has(d)) { seen.add(d); first.push({...r,_d:d}); } }
+    for (const r of rows) {
+      if (r.needs_review) continue; // treat like a missing day — carry forward the last clean value
+      const d = r.created_at.slice(0,10); if (!seen.has(d)) { seen.add(d); first.push({...r,_d:d}); }
+    }
     if (!first.length) return { labels:[], datasets:{} };
-    const skip = ["id","created_at","_d"];
+    const skip = ["id","created_at","_d","needs_review"];
     const cols = Object.keys(first[0]).filter(c => !skip.includes(c));
     const byDate = {}; for (const r of first) byDate[r._d] = r;
     const all = makeDateRange(first[0]._d, first.at(-1)._d);
@@ -284,10 +295,11 @@
       if (!last) continue;
       let t = 0; cols.forEach(c => { const v = last[c]??0; ds[c].push(v); t+=v; }); ds["Total"].push(t);
     }
-    return { labels: all, datasets: ds };
+    return { labels: all, datasets: ds, lastRealDate: first.at(-1)._d };
   }
 
   function processRescues(rows) {
+    rows = rows.filter(r => !r.needs_review); // treat like a missing day — carry forward the last clean value
     if (!rows.length) return { labels:[], datasets:{} };
     const rescues = [...new Set(rows.map(r=>`${r.rescue_name}__${r.island}`))];
     const islands = [...new Set(rows.map(r=>r.island))].sort();
@@ -320,13 +332,17 @@
     const brd = {};
     const rescueFirstDate = {};
     const rescueFirstValue = {};
-    for (const r of deduped) { 
-      const k=`${r.rescue_name}__${r.island}`; 
+    const lastReal = {};
+    for (const r of deduped) {
+      const k=`${r.rescue_name}__${r.island}`;
       if (!brd[k]) brd[k]={};
       brd[k][r.date]=r.total_dogs;
       if (!rescueFirstDate[k] || r.date < rescueFirstDate[k]) {
         rescueFirstDate[k] = r.date;
         rescueFirstValue[k] = r.total_dogs;
+      }
+      if (!lastReal[k] || r.date > lastReal[k].date) {
+        lastReal[k] = { rescue_name: r.rescue_name, island: r.island, date: r.date, total_dogs: r.total_dogs };
       }
     }
     const sorted = deduped.map(r=>r.date).sort();
@@ -349,7 +365,7 @@
       }
       let t=0; islands.forEach(isl=>{const v=it[isl]||0;ds[isl].push(v);t+=v;}); ds["Total"].push(t);
     }
-    return { labels: allD, datasets: ds };
+    return { labels: allD, datasets: ds, lastReal };
   }
 
   function slice(labels, datasets, from, to) {
@@ -449,6 +465,16 @@
     }).join('');
   }
 
+  function updateRescueCards(lastReal) {
+    const el = document.getElementById('rescue-cards');
+    if (!el) return;
+    const items = Object.values(lastReal).sort((a,b)=> a.rescue_name.localeCompare(b.rescue_name));
+    el.innerHTML = items.map(r=>{
+      const days = daysAgo(r.date), cls = days>=7?'bad':days>=2?'warn':'';
+      return `<div class="island-card"><div class="ic-name">${r.rescue_name}</div><div class="ic-val">${fmt(r.total_dogs)}</div><div class="ic-stale ${cls}">last real update: ${fmtStale(days)}</div></div>`;
+    }).join('');
+  }
+
   function renderRescue() {
     const { labels:rL, datasets:rDS } = slice(ALL_R.labels, ALL_R.datasets, currentFrom, currentTo);
     document.getElementById("rescue-section").innerHTML = `
@@ -458,6 +484,7 @@
           <div class="section-desc">Left: absolute count (toggle total/by island) · Right: change from period start (by island)</div>
         </div>
       </div>
+      <div class="rescue-cards" id="rescue-cards"></div>
       <div class="chart-pair">
         <div class="chart-pane">
           <div class="chart-pane-head">
@@ -476,6 +503,8 @@
           <div class="chart-wrap"><canvas id="cDelta"></canvas></div>
         </div>
       </div>`;
+
+    updateRescueCards(ALL_R.lastReal ?? {});
 
     absChart = new Chart(document.getElementById('cAbs'), {
       type:'line', data:{labels:rL, datasets:mkAbsDS(rDS, absMode)},
@@ -515,6 +544,7 @@
         <div>
           <div class="section-title"><strong>Registered</strong> Dogs by Island</div>
           <div class="section-desc">Latest snapshot · bar shows share relative to highest island · change within selected period</div>
+          <div class="section-desc">Last real census update: ${ALL_C.lastRealDate ? fmtStale(daysAgo(ALL_C.lastRealDate)) : '—'}</div>
         </div>
       </div>
       <div class="island-cards" id="census-cards">${cards}</div>
