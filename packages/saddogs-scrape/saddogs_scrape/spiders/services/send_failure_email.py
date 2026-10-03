@@ -10,18 +10,88 @@ logger = logging.getLogger(__name__)
 REPORT_FILE = "scrape_report.json"
 
 
+def _send(body: str, subject: str) -> bool:
+    logger = logging.getLogger(__name__)
+
+    email_from = os.environ.get("EMAIL_FROM")
+    email_to = os.environ.get("EMAIL_TO")
+    email_password = os.environ.get("EMAIL_PASSWORD")
+
+    if not all([email_from, email_to, email_password]):
+        logger.warning("Email env vars not configured. Skipping email.")
+        return False
+
+    msg = MIMEText(body)
+    msg["Subject"] = subject
+    msg["From"] = email_from
+    msg["To"] = email_to
+
+    with smtplib.SMTP("smtp.gmail.com", 587) as server:
+        server.starttls()
+        server.login(email_from, email_password)
+        server.send_message(msg)
+
+    logger.info("Email sent successfully")
+    return True
+
+
+def send_daily_report(
+    missing: list[str],
+    stale: list[str],
+    needs_review_rescues: list[dict],
+    needs_review_census: list[dict],
+    subject: str = "Saddogs Daily Summary",
+) -> bool:
+    """One email, three clearly separated sections: missing today, needs
+    review (last 24h), and stale 7+ days — the last being a worse, distinct
+    problem from an ordinary one-day miss."""
+    logger = logging.getLogger(__name__)
+
+    if not any([missing, stale, needs_review_rescues, needs_review_census]):
+        logger.info("Nothing to report. Skipping email.")
+        return False
+
+    try:
+        body = "🚨 Saddogs Daily Summary\n\n"
+        body += "Summary\n-------\n"
+        body += f"Missing today: {len(missing)}\n"
+        body += f"Needs review (last 24h): {len(needs_review_rescues) + len(needs_review_census)}\n"
+        body += f"🔥 Stale 7+ days: {len(stale)}\n\n"
+
+        if missing:
+            body += "❌ MISSING TODAY\n----------------\n\n"
+            body += ", ".join(sorted(missing)) + "\n\n"
+
+        if needs_review_rescues or needs_review_census:
+            body += "🔍 NEEDS REVIEW (last 24h)\n--------------------------\n\n"
+            for row in needs_review_rescues:
+                body += (
+                    f"  - {row['rescue_name']} ({row['island']}): "
+                    f"total_dogs={row['total_dogs']} on {row['created_at'][:10]}\n"
+                )
+            for row in needs_review_census:
+                body += f"  - census row on {row['created_at'][:10]}\n"
+            body += "\n"
+
+        if stale:
+            body += "🔥🔥 STALE 7+ DAYS 🔥🔥\n----------------------\n\n"
+            body += (
+                "These haven't produced a real (non-flagged) number in a week "
+                "or more — a distinct, worse problem than an ordinary daily miss:\n\n"
+            )
+            body += ", ".join(sorted(stale)) + "\n\n"
+
+        return _send(body, subject)
+
+    except Exception as e:
+        logger.error(f"Failed to send email: {e}")
+        return False
+
+
 def send_failure_email(results: dict, subject: str = None) -> bool:
     logger = logging.getLogger(__name__)
 
     try:
-        email_from = os.environ.get("EMAIL_FROM")
-        email_to = os.environ.get("EMAIL_TO")
-        email_password = os.environ.get("EMAIL_PASSWORD")
-
-        if not all([email_from, email_to, email_password]):
-            logger.warning("Email env vars not configured. Skipping email.")
-            return False
-
         # --- classify ---
         critical = []
         high = []
@@ -87,19 +157,7 @@ def send_failure_email(results: dict, subject: str = None) -> bool:
                 body += " ..."
             body += "\n\n"
 
-        # --- send ---
-        msg = MIMEText(body)
-        msg["Subject"] = subject or "Saddogs Spider Health Alert"
-        msg["From"] = email_from
-        msg["To"] = email_to
-
-        with smtplib.SMTP("smtp.gmail.com", 587) as server:
-            server.starttls()
-            server.login(email_from, email_password)
-            server.send_message(msg)
-
-        logger.info("Failure email sent successfully")
-        return True
+        return _send(body, subject or "Saddogs Spider Health Alert")
 
     except Exception as e:
         logger.error(f"Failed to send email: {e}")
