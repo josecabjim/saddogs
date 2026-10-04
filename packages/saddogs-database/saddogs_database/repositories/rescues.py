@@ -1,7 +1,6 @@
 # saddogs_database/repositories/rescues.py
 
-from datetime import date
-from typing import Optional
+from datetime import UTC, date
 
 from supabase import create_client
 
@@ -19,7 +18,7 @@ class RescueRepository:
         )
         return response.data or []
 
-    def get_latest_count(self, rescue_name: str, island: str) -> Optional[int]:
+    def get_latest_count(self, rescue_name: str, island: str) -> int | None:
         response = (
             self.client.table("rescues")
             .select("total_dogs")
@@ -54,9 +53,9 @@ class RescueRepository:
         for_date: date | None = None,
     ) -> list[tuple[str, str]]:
         """Return (rescue_name, island) pairs from known_pairs with no row today."""
-        from datetime import date as date_type
+        from datetime import datetime
 
-        for_date = for_date or date_type.today()
+        for_date = for_date or datetime.now(tz=UTC).date()
         start = f"{for_date}T00:00:00"
         end = f"{for_date}T23:59:59"
 

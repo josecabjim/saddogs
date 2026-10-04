@@ -1,7 +1,5 @@
 # saddogs_database/repositories/census.py
 
-from typing import Dict, Optional
-
 from supabase import create_client
 
 
@@ -18,7 +16,7 @@ class CensusRepository:
         )
         return response.data or []
 
-    def get_latest(self) -> Optional[Dict]:
+    def get_latest(self) -> dict | None:
         response = (
             self.client.table("census")
             .select("*")
@@ -30,10 +28,10 @@ class CensusRepository:
         data = response.data
         return data[0] if data else None
 
-    def save(self, data: Dict):
+    def save(self, data: dict):
         return self.client.table("census").upsert(data).execute()
 
-    def get_latest_clean(self) -> Optional[Dict]:
+    def get_latest_clean(self) -> dict | None:
         """Most recent row ignoring needs_review rows."""
         response = (
             self.client.table("census")
@@ -47,7 +45,7 @@ class CensusRepository:
         data = response.data
         return data[0] if data else None
 
-    def get_recent_needs_review(self, since_iso: str) -> list[Dict]:
+    def get_recent_needs_review(self, since_iso: str) -> list[dict]:
         response = (
             self.client.table("census")
             .select("*")

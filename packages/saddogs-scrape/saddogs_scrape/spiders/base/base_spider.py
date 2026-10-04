@@ -1,4 +1,3 @@
-import os
 
 import scrapy
 from saddogs_database.client import DatabaseClient
@@ -24,13 +23,13 @@ class BaseRescueSpider(BaseSpider):
     def get_previous_count(self):
         try:
             return self.db.rescues.get_latest_count(self.rescue_name, self.island)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - defensive fallback, any lookup failure should degrade to "no previous count" rather than abort the spider
             self.logger.warning(f"Could not fetch previous count: {e}")
             return None
 
     def save_result(self, count):
         if count <= 0:
-            self.logger.warning(f"Got zero count, skipping save")
+            self.logger.warning("Got zero count, skipping save")
             return  # yields nothing → item_scraped_count stays 0 → monitor retries it
 
         validate_count(self.name, count)

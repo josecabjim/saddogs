@@ -1,14 +1,11 @@
 from __future__ import annotations
 
-from typing import Dict
-
 from spiders.base.base_spider import BaseSpider
-from spiders.services.validation import validate_count
 
 
 class CensusSpider(BaseSpider):
     name = "census"
-    start_urls = ["https://www.zoocan.net/Paginas/Censos.aspx"]
+    start_urls = ["https://www.zoocan.net/Paginas/Censos.aspx"]  # noqa: RUF012 - Scrapy spider class attribute, read by the framework, never mutated per-instance
     db_table = "census"
 
     table_selector = "table"
@@ -18,7 +15,7 @@ class CensusSpider(BaseSpider):
     islands_key = "Islas"
     dogs_key = "Perros"
 
-    mapping = {
+    mapping = {  # noqa: RUF012 - lookup table class attribute, read by the framework, never mutated per-instance
         "No Canario": "no_canario",
         "El Hierro": "el_hierro",
         "Fuerteventura": "fuerteventura",
@@ -38,11 +35,11 @@ class CensusSpider(BaseSpider):
     def get_previous_census(self):
         try:
             return self.db.census.get_latest()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - defensive fallback, any lookup failure should degrade to "no previous census" rather than abort the spider
             self.logger.warning(f"Could not fetch previous census: {e}")
             return None
 
-    def validate_census_data(self, data: Dict[str, int]):
+    def validate_census_data(self, data: dict[str, int]):
         """Validate that each island count is a positive integer."""
         for island, count in data.items():
             if not isinstance(count, int) or count < 0:
@@ -52,7 +49,7 @@ class CensusSpider(BaseSpider):
 
     # TODO should move to database
     def validate_against_previous_census(
-        self, previous: Dict, current: Dict[str, int]
+        self, previous: dict, current: dict[str, int]
     ) -> bool:
         """Return True if any island's count looks anomalous vs. previous (caller
         should save the row with needs_review=True instead of dropping it)."""
@@ -81,7 +78,7 @@ class CensusSpider(BaseSpider):
 
         return anomalous
 
-    def parse_table(self, response) -> Dict[str, list[str]]:
+    def parse_table(self, response) -> dict[str, list[str]]:
         # Handle special case: first header cell is wrapped in <span>
         header_top = response.css("table thead th span::text").get()
         header_rest = response.css("table thead th::text").getall()

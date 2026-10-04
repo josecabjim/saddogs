@@ -45,7 +45,7 @@ class PlaywrightCountSpider(BaseRescueSpider):
             try:
                 await next_button.click()
                 await page.wait_for_timeout(3000)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 - any click/navigation failure should just stop pagination and keep what was counted so far, not crash the spider
                 self.logger.warning(f"Failed to click next page: {e}")
                 break
 

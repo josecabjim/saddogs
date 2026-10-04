@@ -7,7 +7,7 @@ class ElHierroBuscamosHogarSpider(BaseRescueSpider):
     rescue_name = "El Juaclo"
     island = "El Hierro"
 
-    start_urls = ["https://tierheimelhierro.de.tl/Buscamos-un-nuevo-hogar.htm"]
+    start_urls = ["https://tierheimelhierro.de.tl/Buscamos-un-nuevo-hogar.htm"]  # noqa: RUF012 - Scrapy spider class attribute, read by the framework, never mutated per-instance
 
     def parse(self, response):
 

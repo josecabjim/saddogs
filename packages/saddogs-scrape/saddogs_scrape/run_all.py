@@ -4,19 +4,21 @@ import argparse
 import json
 import logging
 import sys
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 from spider_runner import run_all_spiders
 
-_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+logger = logging.getLogger(__name__)
+
+_timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
 REPORT_FILE = Path(__file__).parent / "reports" / f"report_{_timestamp}.json"
 
 
 def write_report(monitor):
     results = monitor.results
     report = {
-        "timestamp": datetime.now().isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "summary": {
             "total": len(results),
             "success": sum(1 for r in results.values() if r["severity"] == "success"),
@@ -49,7 +51,6 @@ if __name__ == "__main__":
         )
         write_report(monitor)
 
-        logger = logging.getLogger(__name__)
         results = monitor.results
 
         critical = [r for r in results.values() if r["severity"] == "critical"]
@@ -68,7 +69,7 @@ if __name__ == "__main__":
             logger.info("All spiders healthy.")
 
     except Exception as e:
-        logging.error(f"Fatal error: {e}", exc_info=True)
+        logger.exception("Fatal error")
         with open(REPORT_FILE, "w") as f:
             json.dump({"success": [], "failed": [["pipeline", str(e)]]}, f)
         sys.exit(1)

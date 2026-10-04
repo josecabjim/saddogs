@@ -12,7 +12,7 @@ class PlaywrightRegexSpider(BaseRescueSpider):
     text_selector = None
     regex_pattern = None
 
-    custom_settings = {
+    custom_settings = {  # noqa: RUF012 - Scrapy spider class attribute, read by the framework, never mutated per-instance
         "ROBOTSTXT_OBEY": False,
         "DOWNLOAD_HANDLERS": {
             "http": "scrapy_playwright.handler.ScrapyPlaywrightDownloadHandler",

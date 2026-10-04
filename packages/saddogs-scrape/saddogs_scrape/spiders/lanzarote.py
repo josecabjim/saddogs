@@ -10,7 +10,7 @@ class LanzaroteSaraSpider(RegexSpider):
     rescue_name = "Sara"
     island = "Lanzarote"
 
-    start_urls = ["https://animales.saraprotectora.org/animales/categoria/1"]
+    start_urls = ["https://animales.saraprotectora.org/animales/categoria/1"]  # noqa: RUF012 - Scrapy spider class attribute, read by the framework, never mutated per-instance
 
     text_selector = "small"
     regex_pattern = r"(\d+)\s*animales"
@@ -22,7 +22,7 @@ class LanzaroteTeguise(AspNetAjaxCountSpider):
     rescue_name = "Teguise"
     island = "Lanzarote"
 
-    start_urls = ["https://albergueanimalesteguise.com/Nuestros-Animales"]
+    start_urls = ["https://albergueanimalesteguise.com/Nuestros-Animales"]  # noqa: RUF012 - Scrapy spider class attribute, read by the framework, never mutated per-instance
 
 
 class LanzaroteCasaEstrellas(PlaywrightCountSpider):
@@ -31,9 +31,9 @@ class LanzaroteCasaEstrellas(PlaywrightCountSpider):
     rescue_name = "Casa de las Estrellas"
     island = "Lanzarote"
 
-    start_urls = ["https://www.casa-de-las-estrellas.org/dogs"]
+    start_urls = ["https://www.casa-de-las-estrellas.org/dogs"]  # noqa: RUF012 - Scrapy spider class attribute, read by the framework, never mutated per-instance
 
-    custom_settings = {
+    custom_settings = {  # noqa: RUF012 - Scrapy spider class attribute, read by the framework, never mutated per-instance
         "ROBOTSTXT_OBEY": False,
         "DOWNLOAD_HANDLERS": {
             "http": "scrapy_playwright.handler.ScrapyPlaywrightDownloadHandler",
