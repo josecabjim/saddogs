@@ -36,31 +36,27 @@ def _send(body: str, subject: str) -> bool:
 
 
 def send_daily_report(
-    missing: list[str],
     stale: list[str],
     needs_review_rescues: list[dict],
     needs_review_census: list[dict],
     subject: str = "Saddogs Daily Summary",
 ) -> bool:
-    """One email, three clearly separated sections: missing today, needs
-    review (last 24h), and stale 7+ days — the last being a worse, distinct
-    problem from an ordinary one-day miss."""
+    """One email, two clearly separated sections: needs review (last 24h)
+    and stale 7+ days. A same-day "missing" miss is deliberately not
+    reported here — it's usually a transient blip that self-heals on the
+    next 4h scrape cycle (see OPERATIONS.md), so it was just noise; a
+    rescue only shows up here once it's been stale for 7+ days."""
     logger = logging.getLogger(__name__)
 
-    if not any([missing, stale, needs_review_rescues, needs_review_census]):
+    if not any([stale, needs_review_rescues, needs_review_census]):
         logger.info("Nothing to report. Skipping email.")
         return False
 
     try:
         body = "🚨 Saddogs Daily Summary\n\n"
         body += "Summary\n-------\n"
-        body += f"Missing today: {len(missing)}\n"
         body += f"Needs review (last 24h): {len(needs_review_rescues) + len(needs_review_census)}\n"
         body += f"🔥 Stale 7+ days: {len(stale)}\n\n"
-
-        if missing:
-            body += "❌ MISSING TODAY\n----------------\n\n"
-            body += ", ".join(sorted(missing)) + "\n\n"
 
         if needs_review_rescues or needs_review_census:
             body += "🔍 NEEDS REVIEW (last 24h)\n--------------------------\n\n"

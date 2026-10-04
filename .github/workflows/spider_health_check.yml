@@ -2,8 +2,9 @@ name: Spider Health Check
 
 on:
   schedule:
-    # every 4 hours
-    - cron: "0 */4 * * *"
+    # Every 8h, offset off the hour (and off daily_scrape.yml's :13) to avoid GH Actions'
+    # top-of-hour congestion/delay and avoid contending with it for runners: 00:41, 08:41, 16:41 UTC.
+    - cron: "41 */8 * * *"
   workflow_dispatch:   # allow manual runs
 
 env:

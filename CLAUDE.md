@@ -98,11 +98,12 @@ retries, dupes, etc.), downgrading spiders listed in `KNOWN_FLAKY_SPIDERS`. `run
 to a timestamped JSON file under `reports/`.
 
 **Scheduled automation** is entirely GitHub Actions (`.github/workflows/`), not app code:
-- `daily_scrape.yml` — every 4h; first runs `check_missing.py` to find rescues with no row for
-  today, then only crawls those spiders.
-- `spider_health_check.yml` — every 4h; runs `run_all.py --dry-run` and uploads the JSON report as a
-  build artifact.
-- `daily_summary.yml` — 22:00 UTC; runs `daily_summary.py`, which emails (via
-  `spiders/services/send_failure_email.py`) a three-section report — missing today, needs review
-  (last 24h), stale 7+ days — if any section is non-empty, and exits non-zero so the workflow run is
-  flagged red.
+- `daily_scrape.yml` — every 8h (00:13/08:13/16:13 UTC); first runs `check_missing.py` to find
+  rescues with no row for today, then only crawls those spiders.
+- `spider_health_check.yml` — every 8h (00:41/08:41/16:41 UTC); runs `run_all.py --dry-run` and
+  uploads the JSON report as a build artifact.
+- `daily_summary.yml` — 21:11 UTC (deliberately not 22:00 — see OPERATIONS.md); runs
+  `daily_summary.py`, which emails (via
+  `spiders/services/send_failure_email.py`) a two-section report — needs review (last 24h), stale
+  7+ days — if either section is non-empty, and exits non-zero so the workflow run is flagged red.
+  A same-day "missing" miss deliberately does not trigger this email; see OPERATIONS.md.

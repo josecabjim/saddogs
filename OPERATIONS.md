@@ -69,11 +69,52 @@ Requires a `.env` in `packages/saddogs-scrape/saddogs_scrape/` (or exported in y
 `packages/saddogs-database/.env`, same Supabase project). But this is a diagnostic tool now, not a
 scheduled dependency.
 
+## Daily summary email dropped "missing today" (2026-10-04)
+
+`daily_summary.py` used to email whenever `check_missing.py` found *any* rescue without a row for
+the current UTC day, even one. In practice this fired most nights for the wrong reason: the
+IP-block investigation above already found that "most/all spiders fail on a given day, then recover
+on the next `daily_scrape.yml` cycle" is a recurring, self-healing pattern with no single root
+cause — not a sign of a real, lasting problem. By the time the daily-summary email was read the next
+morning, the next scrape cycle had often already filled in the missing rows, so the email was noise
+that got ignored. `get_missing_spider_names()` / `check_missing.py` itself is unchanged and still
+drives `daily_scrape.yml`'s "only re-crawl what's missing" logic — only the *email* no longer reports
+same-day misses. `send_daily_report()` now only covers "needs review" (last 24h) and "stale 7+ days"
+(`get_stale_spider_names`), which are the two sections that were actually actionable. A new failure
+now takes up to 7 days to surface by email instead of being flagged same-day; that tradeoff was a
+deliberate choice to cut noise, not an oversight — revisit if 7 days turns out to be too slow.
+
+## Workflow schedules deliberately avoid :00 and the UTC day boundary (2026-10-04)
+
+All three scheduled workflows used to fire exactly on the hour (`0 */4 * * *` for
+`daily_scrape.yml`/`spider_health_check.yml`, `0 22 * * *` for `daily_summary.yml`). GitHub Actions'
+cron schedules are documented to get delayed under load, and the top of every hour is the single
+busiest moment across all of GitHub Actions — exactly when every other `0 * * * *`/`0 */N * * *`
+workflow on the platform also wants a runner. That's the likely explanation for a real incident: a
+`daily_summary.yml` run nominally scheduled for 22:00 UTC actually executed close to 00:00 UTC (i.e.
+slipped into the *next* UTC day) — which also happened to be right when that new day's rows were
+still largely unscraped, making `check_missing.py` (at the time still wired into the email, see
+above) report almost everything as "missing" for a day that had barely started. The 1am-local email
+that triggered this investigation is believed to be exactly that.
+
+Fix, done together with dropping "missing today" from the email above (belt-and-suspenders — either
+change alone would have prevented that specific incident):
+- `daily_scrape.yml` and `spider_health_check.yml` moved from every 4h to every 8h, each offset a
+  different number of minutes off the hour (`13 */8 * * *` and `41 */8 * * *`) — less frequent (fewer
+  requests against target sites, fewer GH Actions minutes) and off the top-of-hour congestion spike.
+- `daily_summary.yml` moved from `0 22 * * *` to `11 21 * * *` — still clearly "end of day" (after
+  the last `daily_scrape.yml` cycle at 16:13 UTC) but with a ~2h45m buffer before midnight UTC, so a
+  schedule delay has real room to still land same-day instead of rolling into the next one.
+
+If a scheduled run's logged start time (visible in the Actions tab) is ever more than ~1h off its
+cron time, suspect GH Actions scheduling load before assuming the pipeline itself did something
+wrong.
+
 ## EMAIL_* secret rotation blind spot
 
-The 22:00 UTC daily-summary email (via `send_failure_email.py`'s Gmail SMTP login) is the main
-trustworthy signal, now that it reports three clearly-separated sections (missing today, needs
-review, stale 7+ days) instead of just "missing today". If `EMAIL_FROM`/`EMAIL_TO`/`EMAIL_PASSWORD`
+The daily-summary email (21:11 UTC, via `send_failure_email.py`'s Gmail SMTP login) is the main
+trustworthy signal, now that it reports two clearly-separated sections (needs review, stale 7+ days)
+instead of just "missing today". If `EMAIL_FROM`/`EMAIL_TO`/`EMAIL_PASSWORD`
 ever rotate or expire, this fails silently (`send_daily_report`/`send_failure_email` just log a
 warning and return `False` — the GH Actions job still exits based on whether there was anything to
 report, independent of whether the email actually sent). If the daily email ever just stops arriving

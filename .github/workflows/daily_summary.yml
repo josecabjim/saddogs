@@ -2,7 +2,10 @@ name: Daily Summary
 
 on:
   schedule:
-    - cron: "0 22 * * *"  # 22:00 UTC daily
+    # 21:11 UTC: late enough to be "end of day" (well after the last daily_scrape.yml cycle
+    # at 16:13 UTC), but with a ~2h45m buffer before midnight UTC so a GH Actions schedule
+    # delay can't push this run into the next UTC day (see OPERATIONS.md).
+    - cron: "11 21 * * *"
   workflow_dispatch:
 
 env:

@@ -2,7 +2,9 @@ name: Daily Scrape
 
 on:
   schedule:
-    - cron: "0 */4 * * *"   # every 4 hours: 00:00, 04:00 ... 20:00 UTC
+    # Every 8h, offset off the hour to avoid GH Actions' top-of-hour congestion/delay:
+    # 00:13, 08:13, 16:13 UTC.
+    - cron: "13 */8 * * *"
   workflow_dispatch:
 
 env:

@@ -8,6 +8,17 @@
 > "GitHub Actions IP-block hypothesis" and "Retired rescues" sections for what's actually true
 > today). This doc is kept as-is below for the reasoning and the original goals/constraints — treat
 > OPERATIONS.md as the up-to-date operational reference, and CLAUDE.md for current repo structure.
+>
+> **Update (2026-10-04): §8.1's email went from three sections back down to two,** and the cron
+> cadence in §6.1/§6.3 changed. §8.1's "missing today" section turned out to be mostly noise — the
+> "most spiders fail together, then recover next cycle" pattern this spec's own §1 describes as the
+> original *problem* turned out to also be a recurring, self-healing, non-incident pattern on
+> ordinary days, not just the one bad day that prompted this spec — so it was dropped from the email
+> (stale 7+ days and needs-review are the two that remained actionable). The 4h scrape/health-check
+> cadence this spec didn't originally specify a value for also moved to 8h, and `daily_summary.yml`'s
+> time moved off 22:00 UTC, both to dodge GitHub Actions' top-of-hour scheduling congestion. See
+> OPERATIONS.md's "Daily summary email dropped 'missing today'" and "Workflow schedules deliberately
+> avoid :00 and the UTC day boundary" entries.
 
 ## 1. Problem statement
 
