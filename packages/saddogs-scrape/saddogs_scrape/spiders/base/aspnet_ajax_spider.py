@@ -10,7 +10,7 @@ class AspNetAjaxCountSpider(BaseRescueSpider):
     per-install by DNN and drifts whenever the site republishes the module, so
     it's read from the page itself rather than hardcoded."""
 
-    custom_settings = {"ROBOTSTXT_OBEY": False}
+    custom_settings = {"ROBOTSTXT_OBEY": False}  # noqa: RUF012 - Scrapy spider class attribute, read by the framework, never mutated per-instance
 
     def parse(self, response):
 

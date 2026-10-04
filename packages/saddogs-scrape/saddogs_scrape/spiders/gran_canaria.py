@@ -8,7 +8,7 @@ class GranCanariaBanaderos(AspNetAjaxCountSpider):
     rescue_name = "Banaderos"
     island = "Gran Canaria"
 
-    start_urls = ["https://albergueanimalesgrancanaria.com/Nuestros-Animales"]
+    start_urls = ["https://albergueanimalesgrancanaria.com/Nuestros-Animales"]  # noqa: RUF012 - Scrapy spider class attribute, read by the framework, never mutated per-instance
 
 
 class GranCanariaTelde(AspNetAjaxCountSpider):
@@ -17,7 +17,7 @@ class GranCanariaTelde(AspNetAjaxCountSpider):
     rescue_name = "Telde"
     island = "Gran Canaria"
 
-    start_urls = ["https://albergueanimalestelde.com/Nuestros-Animales"]
+    start_urls = ["https://albergueanimalestelde.com/Nuestros-Animales"]  # noqa: RUF012 - Scrapy spider class attribute, read by the framework, never mutated per-instance
 
 
 class GranCanariaSosHunde(CountSpider):
@@ -26,7 +26,7 @@ class GranCanariaSosHunde(CountSpider):
     rescue_name = "SOS Hunde"
     island = "Gran Canaria"
 
-    start_urls = ["https://www.sos-hunde-gc.com/vermittlung"]
+    start_urls = ["https://www.sos-hunde-gc.com/vermittlung"]  # noqa: RUF012 - Scrapy spider class attribute, read by the framework, never mutated per-instance
 
     selector = 'div[role="listitem"]._FiCX'
 
@@ -37,7 +37,7 @@ class GranCanariaAda(CountSpider):
     rescue_name = "ADA Gran Canaria"
     island = "Gran Canaria"
 
-    start_urls = ["https://www.adagrancanaria.org/pet-category/perros/"]
+    start_urls = ["https://www.adagrancanaria.org/pet-category/perros/"]  # noqa: RUF012 - Scrapy spider class attribute, read by the framework, never mutated per-instance
 
     selector = "div.item:not(.item_placeholder)"
     pagination_selector = "a.next.page-numbers::attr(href)"
@@ -49,7 +49,7 @@ class GranCanariaHappyDogMaspalomas(CountSpider):
     rescue_name = "Happy Dog Maspalomas"
     island = "Gran Canaria"
 
-    start_urls = ["https://happydogmaspalomas.com/onze-honden/"]
+    start_urls = ["https://happydogmaspalomas.com/onze-honden/"]  # noqa: RUF012 - Scrapy spider class attribute, read by the framework, never mutated per-instance
 
     selector = 'div[data-elementor-type="loop-item"]'
 
@@ -60,7 +60,7 @@ class GranCanariaAnahi(CountSpider):
     rescue_name = "Anahi"
     island = "Gran Canaria"
 
-    start_urls = [
+    start_urls = [  # noqa: RUF012 - Scrapy spider class attribute, read by the framework, never mutated per-instance
         "https://anahidogrescue.org/category/perros/machos/",
         "https://anahidogrescue.org/category/perros/hembras/",
     ]

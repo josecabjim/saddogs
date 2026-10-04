@@ -14,7 +14,7 @@ class TenerifeValleColino(PlaywrightRegexSpider):
     # Plain Scrapy requests get soft-blocked (202/403, no real content) by this
     # site's bot mitigation regardless of source IP — confirmed by testing the
     # exact same residential IP with curl (403) vs. Playwright (200, clean).
-    start_urls = ["https://www.alberguevallecolino.org/adoptar/perros"]
+    start_urls = ["https://www.alberguevallecolino.org/adoptar/perros"]  # noqa: RUF012 - Scrapy spider class attribute, read by the framework, never mutated per-instance
 
     text_selector = "div.col-sm-6.text-right"
     regex_pattern = r"de\s+(\d+)"
@@ -26,7 +26,7 @@ class TenerifeTierraBlanca(RegexSpider):
     rescue_name = "CPA Tierra Blanca"
     island = "Tenerife"
 
-    start_urls = ["https://cpatierrablanca.es/es/adopcion/perros-en-adopcion.html"]
+    start_urls = ["https://cpatierrablanca.es/es/adopcion/perros-en-adopcion.html"]  # noqa: RUF012 - Scrapy spider class attribute, read by the framework, never mutated per-instance
 
     text_selector = "span.fc_item_total_data"
     regex_pattern = r"de\s+(\d+)"
@@ -38,7 +38,7 @@ class TenerifeRefugioInternacional(CountSpider):
     rescue_name = "Refugio Internacional para Animales"
     island = "Tenerife"
 
-    start_urls = ["https://refugiodeanimales.org/adopta/"]
+    start_urls = ["https://refugiodeanimales.org/adopta/"]  # noqa: RUF012 - Scrapy spider class attribute, read by the framework, never mutated per-instance
 
     selector = 'img[width="1080"][height="675"]'
     pagination_selector = "a.next.page-numbers::attr(href)"
@@ -64,9 +64,9 @@ class TenerifeAdepac(PlaywrightCountSpider):
     rescue_name = "ADEPAC Canarias"
     island = "Tenerife"
 
-    start_urls = ["https://www.adepaccanarias.com/adopta/"]
+    start_urls = ["https://www.adepaccanarias.com/adopta/"]  # noqa: RUF012 - Scrapy spider class attribute, read by the framework, never mutated per-instance
 
-    custom_settings = {
+    custom_settings = {  # noqa: RUF012 - Scrapy spider class attribute, read by the framework, never mutated per-instance
         "ROBOTSTXT_OBEY": False,
         "DOWNLOAD_HANDLERS": {
             "http": "scrapy_playwright.handler.ScrapyPlaywrightDownloadHandler",
@@ -108,7 +108,7 @@ class TenerifeK9(CountSpider):
     rescue_name = "K9"
     island = "Tenerife"
 
-    start_urls = [
+    start_urls = [  # noqa: RUF012 - Scrapy spider class attribute, read by the framework, never mutated per-instance
         "https://www.k9tenerife.eu/category/our-animals/k9-dogs/k9-dogs-waiting-for-homes/"
     ]
 

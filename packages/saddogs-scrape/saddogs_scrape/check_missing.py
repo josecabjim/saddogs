@@ -42,7 +42,7 @@ def census_missing(db: DatabaseClient) -> bool:
     else:
         entry_date = ""
 
-    return entry_date != date.today().isoformat()
+    return entry_date != datetime.now(timezone.utc).date().isoformat()
 
 
 def get_missing_spider_names() -> list[str]:
@@ -79,7 +79,7 @@ def get_stale_spider_names(stale_days: int = STALE_DAYS) -> list[str]:
 
     db = DatabaseClient()
     latest_by_pair = db.rescues.get_latest_clean_dates()
-    today = date.today()
+    today = datetime.now(timezone.utc).date()
 
     stale = [
         spider_name

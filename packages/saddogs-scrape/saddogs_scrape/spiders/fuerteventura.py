@@ -7,7 +7,7 @@ class FuerteventuraCentroSur(CountSpider):
     rescue_name = "Mancomunidad Centro Sur Fuerteventura"
     island = "Fuerteventura"
 
-    start_urls = ["https://mancomunidadcentrosurftv.org/adopciones/"]
+    start_urls = ["https://mancomunidadcentrosurftv.org/adopciones/"]  # noqa: RUF012 - Scrapy spider class attribute, read by the framework, never mutated per-instance
 
     selector = "div.ficha-animal"
 

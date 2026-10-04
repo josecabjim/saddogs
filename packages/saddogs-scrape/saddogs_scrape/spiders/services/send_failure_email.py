@@ -79,12 +79,12 @@ def send_daily_report(
 
         return _send(body, subject)
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - top-level boundary: a failure building/sending the email must not crash the daily-summary workflow run
         logger.error(f"Failed to send email: {e}")
         return False
 
 
-def send_failure_email(results: dict, subject: str = None) -> bool:
+def send_failure_email(results: dict, subject: str | None = None) -> bool:
     logger = logging.getLogger(__name__)
 
     try:
@@ -155,7 +155,7 @@ def send_failure_email(results: dict, subject: str = None) -> bool:
 
         return _send(body, subject or "Saddogs Spider Health Alert")
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - top-level boundary: a failure building/sending the email must not crash the health-check workflow run
         logger.error(f"Failed to send email: {e}")
         return False
 

@@ -8,11 +8,11 @@ class LaGomeraProAnimal(PlaywrightCountSpider):
     rescue_name = "Pro Animal"
     island = "La Gomera"
 
-    start_urls = ["https://www.proanimalgomera.com/refugio-virtual/perros/"]
+    start_urls = ["https://www.proanimalgomera.com/refugio-virtual/perros/"]  # noqa: RUF012 - Scrapy spider class attribute, read by the framework, never mutated per-instance
 
     selector = "div.team-member"
 
-    custom_settings = {
+    custom_settings = {  # noqa: RUF012 - Scrapy spider class attribute, read by the framework, never mutated per-instance
         "ROBOTSTXT_OBEY": False,
         "DOWNLOAD_HANDLERS": {
             "http": "scrapy_playwright.handler.ScrapyPlaywrightDownloadHandler",
