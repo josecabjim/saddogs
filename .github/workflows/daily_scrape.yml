@@ -18,7 +18,7 @@ jobs:
       missing_spiders: ${{ steps.check.outputs.missing_spiders }}
       has_missing: ${{ steps.check.outputs.has_missing }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v4
         with:
           python-version: ${{ env.PYTHON_VERSION }}
@@ -53,7 +53,7 @@ jobs:
     if: needs.check_missing.outputs.has_missing == 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v4
         with:
           python-version: ${{ env.PYTHON_VERSION }}
