@@ -5,7 +5,6 @@ rescue spiders). Instantiated with dry_run=True so no DatabaseClient / env
 vars / network access is needed -- this is pure per-island threshold logic."""
 
 import pytest
-
 from spiders.census import CensusSpider
 
 

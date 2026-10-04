@@ -3,6 +3,20 @@
 Operational notes that aren't discoverable from the code itself. See `SPEC.md` for the reliability
 work these came out of.
 
+## Census anomaly check has no `previous == 0` guard, unlike the rescue-count check (found 2026-10-04)
+
+`spiders/services/validation.py`'s `validate_against_previous` (rescue-count path) explicitly
+returns `False` — not anomalous — when `previous_count == 0`, since any ratio-based comparison
+against zero is meaningless. `census.py`'s `validate_against_previous_census` has no equivalent
+guard: if a previous island count was 0, `current_count > previous_count * 3` is `True` for any
+`current_count > 0`, so a genuine recovery from zero gets flagged `needs_review = true`. Found while
+writing unit tests for both (`packages/saddogs-scrape/tests/test_validation.py` and
+`test_census.py`), not by observing it cause a real incident — census counts going to exactly zero
+and back seems to be rare in practice. Not fixed, since it's unclear which behavior is actually
+wanted for census (a previous reading of exactly 0 might itself be suspect, in which case flagging
+the recovery is arguably correct) — a judgment call for whoever next touches `census.py`, not a bug
+assumed to need fixing.
+
 ## `saddogs-database` path-dependency goes stale silently
 
 `packages/saddogs-scrape` (and the now-deleted `projects/saddogs-api`, if this pattern is ever

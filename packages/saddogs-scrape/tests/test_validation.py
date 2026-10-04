@@ -6,7 +6,6 @@ false "anomaly"/"missing" incident this test suite exists to catch early."""
 import warnings
 
 import pytest
-
 from spiders.services.validation import validate_against_previous
 
 

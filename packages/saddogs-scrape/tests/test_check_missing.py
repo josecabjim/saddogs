@@ -11,7 +11,6 @@ stand-ins for the one `db` argument that needs one.
 from datetime import date, datetime, timedelta, timezone
 
 import pytest
-
 from check_missing import _to_date, census_missing
 
 
@@ -69,7 +68,7 @@ class TestCensusMissing:
         assert census_missing(db) is True
 
     def test_todays_row_as_date_only_string_is_not_missing(self):
-        today_str = date.today().isoformat()
+        today_str = date.today().isoformat()  # noqa: DTZ011 - matches census_missing()'s own naive date.today() comparison
         db = _FakeDB(latest={"created_at": today_str})
         assert census_missing(db) is False
 
@@ -84,7 +83,7 @@ class TestCensusMissing:
         assert census_missing(db) is False
 
     def test_yesterdays_row_is_missing(self):
-        yesterday_str = (date.today() - timedelta(days=1)).isoformat()
+        yesterday_str = (date.today() - timedelta(days=1)).isoformat()  # noqa: DTZ011 - matches census_missing()'s own naive date.today() comparison
         db = _FakeDB(latest={"created_at": yesterday_str})
         assert census_missing(db) is True
 

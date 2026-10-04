@@ -64,8 +64,19 @@ A single spider can also be run with plain Scrapy from the same directory:
 There's no backend service to serve — `index.html` reads Supabase directly from the browser with
 the publishable key hardcoded in the file itself (not an env var).
 
-There is currently no automated test suite (`packages/saddogs-database/tests/` only contains an
-empty `__init__.py`), and no lint/format command is configured in either project.
+`packages/saddogs-scrape` has a small, targeted test suite — pure-logic unit tests for the
+anomaly-check thresholds (`spiders/services/validation.py`, `spiders/census.py`) and the
+date-boundary helpers in `check_missing.py` — run with `poetry run pytest` from
+`packages/saddogs-scrape`. It deliberately does not test spiders themselves (mocking Scrapy/Playwright
+against live sites is high effort, low value here). `packages/saddogs-database/tests/` still only
+contains an empty `__init__.py` — there's no app logic there to unit-test, just a thin Supabase
+client/repositories wrapper.
+
+Both projects have `ruff` configured (`poetry run ruff check .` from each project directory) and a
+`.github/workflows/ci.yml` that runs on every push/PR: installs each package, smoke-imports it
+(for `saddogs-scrape`, that means importing every spider module via `load_spiders()`), lints with
+ruff, and (for `saddogs-scrape`) runs pytest. This exists because, before it did, a broken commit
+wasn't caught until the next scheduled cron run — see OPERATIONS.md.
 
 Required environment variables (loaded via `.env` / `python-dotenv` in most entry points):
 - `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` — everywhere the database is read or written.
@@ -107,3 +118,7 @@ to a timestamped JSON file under `reports/`.
   `spiders/services/send_failure_email.py`) a two-section report — needs review (last 24h), stale
   7+ days — if either section is non-empty, and exits non-zero so the workflow run is flagged red.
   A same-day "missing" miss deliberately does not trigger this email; see OPERATIONS.md.
+
+`.github/workflows/ci.yml` is separate from the scheduled automation above — it runs on every push
+to `main` and every PR (install, smoke-import, lint, test; see above). `.github/dependabot.yml`
+opens weekly version-update PRs for both Poetry projects and for the GitHub Actions themselves.

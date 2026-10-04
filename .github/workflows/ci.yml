@@ -26,6 +26,8 @@ jobs:
         run: |
           cd packages/saddogs-database
           poetry run python -c "from saddogs_database.client import DatabaseClient"
+      - name: Lint (ruff)
+        run: cd packages/saddogs-database && poetry run ruff check .
 
   saddogs-scrape:
     runs-on: ubuntu-latest
@@ -43,3 +45,7 @@ jobs:
         run: |
           cd packages/saddogs-scrape/saddogs_scrape
           poetry run python -c "from spider_runner import load_spiders; load_spiders()"
+      - name: Lint (ruff)
+        run: cd packages/saddogs-scrape && poetry run ruff check .
+      - name: Unit tests
+        run: cd packages/saddogs-scrape && poetry run pytest
