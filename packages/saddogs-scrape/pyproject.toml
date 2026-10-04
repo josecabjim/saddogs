@@ -15,13 +15,16 @@ scrapy-playwright = "^0.0.46"
 python-dotenv = "^1.2.1"
 saddogs-database = { path = "../saddogs-database" }
 
-[build-system]
-requires = ["poetry-core>=2.0.0,<3.0.0"]
-build-backend = "poetry.core.masonry.api"
-[dependency-groups]
-dev = [
-    "ruff (>=0.16.10,<0.17.0)"
-]
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3.0"
+ruff = "^0.16.10"
+
+[tool.pytest.ini_options]
+pythonpath = ["saddogs_scrape"]
 
 [tool.ruff]
 line-length = 120
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
