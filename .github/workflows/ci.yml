@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+env:
+  PYTHON_VERSION: "3.12"
+  POETRY_VERSION: "2.3.0"
+
+jobs:
+  saddogs-database:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - uses: snok/install-poetry@v1
+        with:
+          version: ${{ env.POETRY_VERSION }}
+          virtualenvs-in-project: true
+      - run: cd packages/saddogs-database && poetry install
+      - name: Smoke-import saddogs_database
+        run: |
+          cd packages/saddogs-database
+          poetry run python -c "from saddogs_database.client import DatabaseClient"
+
+  saddogs-scrape:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - uses: snok/install-poetry@v1
+        with:
+          version: ${{ env.POETRY_VERSION }}
+          virtualenvs-in-project: true
+      - run: cd packages/saddogs-scrape && poetry install
+      - name: Smoke-import every spider module
+        run: |
+          cd packages/saddogs-scrape/saddogs_scrape
+          poetry run python -c "from spider_runner import load_spiders; load_spiders()"
