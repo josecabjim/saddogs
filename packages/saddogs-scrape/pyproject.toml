@@ -16,7 +16,7 @@ python-dotenv = "^1.2.1"
 saddogs-database = { path = "../saddogs-database" }
 
 [tool.poetry.group.dev.dependencies]
-pytest = "^8.3.0"
+pytest = ">=8.3,<10.0"
 ruff = "^0.16.10"
 
 [tool.pytest.ini_options]
