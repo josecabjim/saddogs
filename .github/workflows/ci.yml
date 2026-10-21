@@ -11,7 +11,7 @@ env:
 
 jobs:
   saddogs-database:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
@@ -30,7 +30,7 @@ jobs:
         run: cd packages/saddogs-database && poetry run ruff check .
 
   saddogs-scrape:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4

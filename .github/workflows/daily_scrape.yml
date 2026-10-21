@@ -13,7 +13,7 @@ env:
 
 jobs:
   check_missing:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       missing_spiders: ${{ steps.check.outputs.missing_spiders }}
       has_missing: ${{ steps.check.outputs.has_missing }}
@@ -51,7 +51,7 @@ jobs:
   scrape:
     needs: check_missing
     if: needs.check_missing.outputs.has_missing == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
