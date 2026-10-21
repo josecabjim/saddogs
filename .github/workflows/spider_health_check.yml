@@ -40,7 +40,7 @@ jobs:
           poetry run python run_all.py --dry-run
       - name: Upload health check report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: spider-health-report
           path: packages/saddogs-scrape/saddogs_scrape/reports/report_*.json
