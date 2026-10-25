@@ -113,6 +113,7 @@
     .ic-stale { font-family: 'Space Mono', monospace; font-size: 0.56rem; margin-top: 5px; color: var(--muted-hi); white-space: nowrap; }
     .ic-stale.warn { color: var(--accent); }
     .ic-stale.bad { color: var(--red); }
+    #rescue-hidden-note:empty { display: none; }
 
     /* RESCUE CARDS — grid, wraps to as many rows as needed */
     .rescue-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 2px; margin-bottom: 20px; }
@@ -246,6 +247,9 @@
   const { createClient } = supabase;
   const db = createClient(SUPABASE_URL, SUPABASE_KEY);
   const ABSOLUTE_START = "2026-03-14";
+  // Rescue cards for sites with no clean update in this many days are hidden (they still count
+  // toward the charts at their last value, and reappear as soon as a new update lands).
+  const HIDE_STALE_AFTER_DAYS = 90;
   const PAL = ["#e8c547","#6ab0e8","#5bbd8a","#e06060","#c47be8","#e8916a","#6ae8d4","#e86ab0","#a0e86a"];
 
   Chart.defaults.font.family = "'Space Mono', monospace";
@@ -468,11 +472,15 @@
   function updateRescueCards(lastReal) {
     const el = document.getElementById('rescue-cards');
     if (!el) return;
-    const items = Object.values(lastReal).sort((a,b)=> a.rescue_name.localeCompare(b.rescue_name));
+    const all = Object.values(lastReal);
+    const items = all.filter(r => daysAgo(r.date) <= HIDE_STALE_AFTER_DAYS).sort((a,b)=> a.rescue_name.localeCompare(b.rescue_name));
     el.innerHTML = items.map(r=>{
       const days = daysAgo(r.date), cls = days>=7?'bad':days>=2?'warn':'';
       return `<div class="island-card"><div class="ic-name">${r.rescue_name}</div><div class="ic-val">${fmt(r.total_dogs)}</div><div class="ic-stale ${cls}">last real update: ${fmtStale(days)}</div></div>`;
     }).join('');
+    const hidden = all.length - items.length;
+    const note = document.getElementById('rescue-hidden-note');
+    if (note) note.textContent = hidden ? `${hidden} rescue${hidden===1?'':'s'} with no update in over ${HIDE_STALE_AFTER_DAYS} days hidden here (still counted in the charts at their last value)` : '';
   }
 
   function renderRescue() {
@@ -485,6 +493,7 @@
         </div>
       </div>
       <div class="rescue-cards" id="rescue-cards"></div>
+      <div class="ic-stale" id="rescue-hidden-note" style="margin:-6px 0 14px;white-space:normal"></div>
       <div class="chart-pair">
         <div class="chart-pane">
           <div class="chart-pane-head">
